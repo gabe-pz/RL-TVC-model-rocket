@@ -19,7 +19,6 @@ int main(void){
     const double aRef = 0.00456; 
     const double cD = 0.291;
     const int cNa = 2;
-    const float rho = 1.187f;
 
     //cg and moment arm
     const double centerOfGravity = 0.405;
@@ -33,6 +32,7 @@ int main(void){
     const double dt = 0.000001;
     const int simTime = 15;
     const double gravity = 9.81;  
+    const float rho = 1.187f;
 
     //*****WIND SETTINGS*****
     //wind generation constants
@@ -80,7 +80,7 @@ int main(void){
     //servos offsets 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(0.5f, 1.0f);//misalignment between 0.5 and 1 degree
+    std::uniform_real_distribution<float> dist(1.0f, 2.25f);//misalignment between 0.5 and 1 degree
     
     float servosXOffset = dist(gen);
     float servosYOffset = dist(gen);
