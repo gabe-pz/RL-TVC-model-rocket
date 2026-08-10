@@ -19,3 +19,7 @@ void initWeightsAndBiases(std::array<float, 64*4>& w1, std::array<float, 64*64>&
     b2.fill(0.0f);
     b3.fill(0.0f);
 }
+float ReLU(float y){
+    if(y > 0) return y;
+    else return 0.0f;
+}
