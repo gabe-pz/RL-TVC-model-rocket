@@ -103,7 +103,6 @@ int main(void){
     //*****RAYLIB INITALIZATION*****
     int FPS = 60;  
     Camera3D camera = raylibInit(FPS);
-
     //raylib sync 
     int iterationsPerFrame = (1/(dt*FPS)); 
     double t = 0.0;
@@ -149,6 +148,7 @@ int main(void){
         if(!landed){
             //state update
             for(int i = 0; i < iterationsPerFrame; i++){
+                //*****TIME*****
                 t += dt;
                 timeSinceLastControl += dt; 
 
@@ -158,7 +158,8 @@ int main(void){
                     pidControl(pidArrayY, pidGainsY, prevErrorY, desiredY, psi[1], controlDt, 1);
                     timeSinceLastControl = 0.0; //go back one period
                 }
-
+                
+                //******SERVO LIMITING*****
                 slewServo(currentServoX, desiredX, maxRate, dt);
                 slewServo(currentServoY, desiredY, maxRate, dt);
 
@@ -194,7 +195,8 @@ int main(void){
                 //sum forces
                 sumOfForcesWf = {thrustWf[0]+aerodynamicForceswf[0], thrustWf[1]+aerodynamicForceswf[1], thrustWf[2]-mass(t)*gravity+aerodynamicForceswf[2]}; 
                 
-                //****GET POSITION THROUGH ITS DERIVATIVES AND SUCH*****
+
+                //****GET POSITION THROUGH ITS DERIVATIVES VIA EULER INTEGRATION*****
                 //compute accleration
                 accleration[0] = (sumOfForcesWf[0] / mass(t));
                 accleration[1] = (sumOfForcesWf[1] / mass(t));
@@ -210,11 +212,13 @@ int main(void){
                 position[1] += dt*velocity[1];
                 position[2] += dt*velocity[2]; 
 
-                //****GET ROATION THROUGH ITS DERIVATIVES*****
-                //compute torques   
+
+                //*****COMPUTE TORQUES*****
                 torqueThrust = crossProduct(r, thrustRf);
                 torqueAero = crossProduct(rAero, aerodynamicForcesRf);
 
+
+                //****GET ROATION THROUGH ITS DERIVATIVES VIA EULER INTEGRATION*****
                 //compute angular accleration
                 angularAccleration[0] = ((torqueThrust[0] + torqueAero[0]) / Ixx);
                 angularAccleration[1] = ((torqueThrust[1] + torqueAero[1]) / Iyy);
@@ -242,30 +246,32 @@ int main(void){
                 //normalize quaterinon 
                 normalizeQuaternion(stateQ);
 
-                //get euler angles
+                //EULER ANGLES
                 psi = quaternionToEuler(stateQ); 
                 
-                //*****LANDING CHECK*****
-                if(position[2] < 0 && t > 0.5){
-                    landed = true; 
-                    break;
-                }
                 
-                //******COASTING*****
-                if(t > 3.45 && coastingOver != true && printedCoasted != true){
-                    std::cout << "COASTING PHASE" << std::endl;
-                    printedCoasted = true;
-                }
+                //*****STATE CHECKS*****
+                    //*****LANDING CHECK*****
+                    if(position[2] < 0 && t > 0.5){
+                        landed = true; 
+                        break;
+                    }
+                    
+                    //******COASTING*****
+                    if(t > 3.45 && coastingOver != true && printedCoasted != true){
+                        std::cout << "COASTING PHASE" << std::endl;
+                        printedCoasted = true;
+                    }
 
-                //*****APOGEE CHECK*****
-                currentAltitude = position[2];
-                if(currentAltitude < prevAltitude && printedApogee != true){
-                    std::cout << "APOGEE at t = " << t << "s" << std::endl; 
-                    std::cout << "APOGEE ALTITUDE = " << position[2]*3.281 << "ft" << std::endl;
-                    printedApogee = true;
-                    coastingOver = true;
-                }
-                prevAltitude = currentAltitude;
+                    //*****APOGEE*****
+                    currentAltitude = position[2];
+                    if(currentAltitude < prevAltitude && printedApogee != true){
+                        std::cout << "APOGEE at t = " << t << "s" << std::endl; 
+                        std::cout << "APOGEE ALTITUDE = " << position[2]*3.281 << "ft" << std::endl;
+                        printedApogee = true;
+                        coastingOver = true;
+                    }
+                    prevAltitude = currentAltitude;
 
                 //*****LOGGING*****
                 timeSinceLastLog += dt;
@@ -274,7 +280,7 @@ int main(void){
                     logToCSV(t, rad2deg(psi[1]), "logging/dataRotY.csv");
                     timeSinceLastLog = 0.0; 
                 }
-            
+                
             }
         }
         raylibDrawRocket(distanceToThrustVector, centerOfGravity, stateQ, position, camera);
