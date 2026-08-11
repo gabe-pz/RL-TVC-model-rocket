@@ -1,9 +1,7 @@
 #include <iostream>
 #include <random> 
 #include <array>
-#include <cmath> 
-#include <raylib.h> 
-#include <rlgl.h> 
+
 
 #include "../include/windGeneration.h" 
 #include "../include/rocketMath.h"
@@ -143,7 +141,7 @@ int main(void){
 
     //wind velocity initalization
     std::array<double, 3> windVelocityWf = {0.0, 0.0, 0.0};
-   
+
     while (!WindowShouldClose()){
         if(!landed){
             //state update
