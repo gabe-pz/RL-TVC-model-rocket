@@ -7,6 +7,9 @@
 float ReLU(float y);
 
 void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 4>, 64>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, std::array<float, 4>& b3); 
+std::array<float, 4740> flatten_parameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
+    const std::array<std::array<float, 4>, 64>& w3,
+    const std::array<float, 4>& b3);
 
 //*****Pre-activations and activations*****
 template<typename T, std::size_t in, std::size_t out>
@@ -44,17 +47,29 @@ float derivativeZkWrtB_3ij(const std::array<float, 4>& yOut, int k);
 
 //*****GRADIENTS*****
 //part 1 of gradients
-std::array<std::array<float, 64*4>, 2> gradientLogPoliciesW1(const std::array<double, 4>& stateVec, std::array<float, 64>& y1, const std::array<float, 4>& yOut, const std::array<float, 4>& mK, const std::array<float, 4>& partialsN);
+std::array<std::array<float, 64*4>, 2> gradientLogPoliciesW1(const std::array<double, 4>& stateVec, std::array<float, 64>& y1, const std::array<float, 4>& yOut, const std::array<float, 4>& mK, 
+    const std::array<float, 4>& partialsN);
 //part 2 of gradients 
 std::array<std::array<float, 64>, 2> gradientLogPoliciesB1(const std::array<float, 64>& y1, const std::array<float, 4>& outputs, const std::array<float, 4>& mK, const std::array<float, 4>& partialsN);
 
 //part 3 of gradients 
-std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> a1, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK);
+std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> a1, const std::array<float, 64> y2, const std::array<float, 4> yOut, 
+    const std::array<float, 4>& mK);
 //part 4 of gradients 
-std::array<std::array<float, 64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK);
+std::array<std::array<float, 64>, 2> gradientLogPoliciesB2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK);
 
 //part 5 of gradients 
 std::array<std::array<float, 4*64>, 2> gradientLogPoliciesW3(const std::array<float, 4>& yOut, const std::array<float, 64> a2, const std::array<float, 4>& mK);
 //part 6 of gradients
 std::array<std::array<float, 4>, 2> gradientLogPoliciesB3(const std::array<float, 4>& yOut, const std::array<float, 4>& mK);
 
+//construction function
+std::array<std::array<float, 4740>, 2> constructGradients(const std::array<std::array<float, 64*4>, 2>& gW1, const std::array<std::array<float, 64>, 2>& gB1, const std::array<std::array<float, 64*64>, 2>& gW2, 
+    const std::array<std::array<float, 64>, 2>& gB2, const std::array<std::array<float, 4*64>, 2>& gW3, const std::array<std::array<float, 4>, 2>& gB3);
+
+//Gradient term REINFORCE
+std::array<float, 4740> gradientTerm(const std::array<float, 4740>& gradX, const std::array<float, 4740>& gradY, int alpha, float G);
+
+
+//REINFORCE parameter update
+void REINFORCEupdate(std::array<float, 4740>& parameters, const std::array<float, 4740>& gradientTerm);

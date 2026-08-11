@@ -30,6 +30,58 @@ void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<s
     b3.fill(0.0f);
 }
 
+std::array<float, 4740> flatten_parameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
+    const std::array<std::array<float, 4>, 64>& w3,
+    const std::array<float, 4>& b3)
+{
+
+    std::array<float, 4740> output;
+    int index = 0;
+
+    //w1
+    for(int i = 0; i < 64; i++){
+        for(int j = 0; j < 4; j++){
+            output[index] = w1[i][j];
+            index++;
+        }
+    }
+
+    //b1
+    for(int i = 0; i < 64; i++){
+        output[index] = b1[i];
+        index++;
+    }
+
+    //w2
+    for(int i = 0; i < 64; i++){
+        for(int j = 0; j < 64; j++){
+            output[index] = w2[i][j];
+            index++;
+        }
+    }
+
+    //b2
+    for(int i = 0; i < 64; i++){
+        output[index] = b2[i];
+        index++;
+    }
+
+    //w3
+    for(int i = 0; i < 64; i++){
+        for(int j = 0; j < 4; j++){
+            output[index] = w3[i][j];
+            index++;
+        }
+    }
+
+    //b3
+    for(int i = 0; i < 4; i++){
+        output[index] = b3[i];
+        index++;
+    }
+
+    return output;
+} 
 
 //*****Pre-activations and activations*****
 template<typename T, std::size_t in, std::size_t out>
@@ -231,7 +283,7 @@ std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<s
     return outputs;
 }
 //part 4 of gradients of log of the policies wrt to biases in the second layer
-std::array<std::array<float, 64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
+std::array<std::array<float, 64>, 2> gradientLogPoliciesB2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
     std::array<std::array<float, 64>, 2> outputs;
 
     std::array<float, 64> gradientLogPolicyXB2; 
@@ -239,12 +291,12 @@ std::array<std::array<float, 64>, 2> gradientLogPoliciesW2(const std::array<std:
 
     //x
     for(int i = 0; i < 64; i++){
-        gradientLogPolicyXB2.at(i) = mK.at(0)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 0); + mK.at(1)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 1);
+        gradientLogPolicyXB2.at(i) = mK.at(0)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 0) + mK.at(1)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 1);
     }
     
     //y
     for(int i = 0; i < 64; i++){
-        gradientLogPolicyYB2.at(i) = mK.at(2)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 2); + mK.at(3)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 3);
+        gradientLogPolicyYB2.at(i) = mK.at(2)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 2) + mK.at(3)*derivativeZkWrtB_2ij(y2, yOut, w3, i, 3);
     }
 
     outputs.at(0) = gradientLogPolicyXB2;
@@ -277,7 +329,7 @@ std::array<std::array<float, 4*64>, 2> gradientLogPoliciesW3(const std::array<fl
     }
 
     outputs.at(0) = gradientLogPolicyXW3;
-    outputs.at(0) = gradientLogPolicyYW3;
+    outputs.at(1) = gradientLogPolicyYW3;
 
     return outputs;
 }
@@ -300,7 +352,60 @@ std::array<std::array<float, 4>, 2> gradientLogPoliciesB3(const std::array<float
     }
 
     outputs.at(0) = gradientLogPolicyXB3;
-    outputs.at(0) = gradientLogPolicyYB3;
+    outputs.at(1) = gradientLogPolicyYB3;
 
     return outputs;
+}
+
+//construction function
+std::array<std::array<float, 4740>, 2> constructGradients(const std::array<std::array<float, 64*4>, 2>& gW1, const std::array<std::array<float, 64>, 2>& gB1, const std::array<std::array<float, 64*64>, 2>& gW2, 
+    const std::array<std::array<float, 64>, 2>& gB2, const std::array<std::array<float, 4*64>, 2>& gW3, const std::array<std::array<float, 4>, 2>& gB3){
+
+        std::array<std::array<float, 4740>, 2> outputs; 
+
+        for(int i = 0; i < 2; i++){
+            int index = 0; 
+            
+            for(int j = 0; j < 64*4; j++){
+                outputs[i][index++] = gW1[i][j];
+            }
+            for(int j = 0; j < 64; j++){
+                outputs[i][index++] = gB1[i][j];
+            }
+            for(int j = 0; j < 64*64; j++){
+                outputs[i][index++] = gW2[i][j];
+            }
+            for(int j = 0; j < 64; j++){
+                outputs[i][index++] = gB2[i][j];
+            }
+            for(int j = 0; j < 4*64; j++){
+                outputs[i][index++] = gW3[i][j];
+            }
+            for(int j = 0; j < 4; j++){
+                outputs[i][index++] = gB3[i][j];
+            }
+
+        }
+
+        return outputs;
+}
+
+//Gradient term REINFORCE
+std::array<float, 4740> gradientTerm(const std::array<float, 4740>& gradX, const std::array<float, 4740>& gradY, int alpha, float G){
+    std::array<float, 4740> gradTerm;
+
+    for(int i = 0; i < 4740; i++){
+        gradTerm[i] = alpha*G*gradX[i]+gradY[i];
+    }
+
+    return gradTerm;
+}
+
+
+//REINFORCE parameter update
+void REINFORCEupdate(std::array<float, 4740>& parameters, const std::array<float, 4740>& gradientTerm){
+    for(int i = 0; i < 4740; i++){
+        parameters[i] += gradientTerm[i];
+
+    }
 }
