@@ -30,6 +30,8 @@ void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<s
     b3.fill(0.0f);
 }
 
+
+//*****Pre-activations and activations*****
 template<typename T, std::size_t in, std::size_t out>
 std::array<float, out> preActivations(const std::array<std::array<float, in>, out>& w, const std::array<float, out>& b, const std::array<T, in>& vecIn){
     std::array<float, out> y{};
@@ -58,4 +60,20 @@ std::array<float, out> activations(std::array<float, out> y){
     }
 
     return a;
+}
+
+//*****DERIVATIVES*****
+float derivativeActivationWrtPreactivation(float yLk){
+    if(yLk > 0) return 1.0f;
+    else return 0.0f; 
+}
+
+template<std::size_t in, std::size_t out>
+float derivativePreactivationWrtActivation(const std::array<std::array<float, in>, out>& w, int n, int m){
+    return w.at(n).at(m);
+}
+
+template<typename T, std::size_t in>
+float derivativePreactivationWrtWeight(const std::array<T, in>& vecIn, int j){
+    return vecIn.at(j)*1.0f;
 }
