@@ -26,6 +26,8 @@ float sumDerivatives(int k, const std::array<std::array<float, 64>, 64>& w2, con
     for(int n = 0; n < 64; n++){
         partialN += derivativePreactivationWrtActivation(w3, k, n)*derivativeActivationWrtPreactivation(y2.at(n))*derivativePreactivationWrtActivation(w2, k, n);
     }
+
+    return partialN;
 }
 
 //helper function that returns the common terms in each gradient componenet

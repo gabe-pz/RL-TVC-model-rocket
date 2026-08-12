@@ -89,14 +89,14 @@ std::array<float, out> preActivations(const std::array<std::array<float, in>, ou
     std::array<float, out> y{};
     
     //pre-activations no bias
-    for(int i = 0; i < out; i++){
-        for(int j = 0; j < in; j++){
+    for(size_t i = 0; i < out; i++){
+        for(size_t j = 0; j < in; j++){
             y.at(i) += w.at(i).at(j)*vecIn.at(j);
         }
     }
 
     //add bias
-    for(int i = 0; i < out; i++){
+    for(size_t i = 0; i < out; i++){
         y.at(i) += b.at(i);
     }
 
@@ -107,14 +107,14 @@ template<std::size_t out>
 std::array<float, out> activations(std::array<float, out> y){
     std::array<float, out> a;
 
-    for(int i = 0; i< out; i++){
+    for(size_t i = 0; i< out; i++){
         a.at(i) = ReLU(y.at(i));
     }
 
     return a;
 }
 
-std::array<arrayVariant, 6> mlp(const std::array<double, 4> s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
+MLPoutput mlp(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
     const std::array<float, 64>& b2, const std::array<float, 4>& b3){
 
         std::array<float, 64> y1 = preActivations(w1, b1, s); 

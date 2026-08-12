@@ -4,6 +4,8 @@
 
 double clamp(double val, double min, double max);
 double rad2deg(double angle);
+double deg2rad(double angle); 
+
 std::array<double, 4> vectorToPureQuaternion(const std::array<double, 3>& vec);
 std::array<double, 4> multiplyQP(const std::array<double, 4>& q, const std::array<double, 4>& p); 
 std::array<double, 4> conjugateQuaternion(const std::array<double, 4>&q);

@@ -2,9 +2,7 @@
 
 #include <random>
 #include <array>
-#include <variant> 
 
-using arrayVariant = std::variant<std::array<float, 64>, std::array<float, 4>>;
 
 //*****ACTIVATION FUNCTION*****
 float ReLU(float y);
@@ -28,5 +26,11 @@ std::array<float, out> activations(std::array<float, out> y1);
 
 
 //****MLP*****
-std::array<arrayVariant, 6> mlp(const std::array<double, 4> s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64>& b1, 
+struct MLPoutput{
+    std::array<float, 64> y1, a1, y2, a2;
+    std::array<float, 4> y3, a3; 
+    
+};
+
+MLPoutput mlp(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
     const std::array<float, 64>& b2, const std::array<float, 4>& b3);

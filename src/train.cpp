@@ -1,10 +1,13 @@
 #include <array>
+#include <vector> 
+#include <iostream> 
+#include <random> 
 
 #include "../include/physics/windGeneration.h" 
 #include "../include/math/rocketMath.h"
 #include "../include/physics/rocketProperties.h"
 #include "../include/control/control.h"
-#include "../include/graphics/raylibFunction.h"
+#include "../include/rl/mlp.h"
 
 int main(void){
 
@@ -63,7 +66,7 @@ int main(void){
     //*******STD ARRAY INITALIZATIONS*****
     //quaterion initaliztion
     std::array<double, 4> stateQ = {1.0, 0.0, 0.0, 0.0};
-    std::array<double, 4> stateQTimeDerivative = {1.0, 0.0, 0.0, 0.0};
+    std::array<double, 4> stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
     std::array<double, 4> angularVelocityQ = {1.0, 0.0, 0.0, 0.0};
 
     //forces initalization
@@ -96,25 +99,99 @@ int main(void){
     //wind velocity initalization
     std::array<double, 3> windVelocityWf = {0.0, 0.0, 0.0};
 
-    //rl 
+
+    //*****RL*****
+    //state vector
     std::array<double, 4> stateVector = {0.0, 0.0, 0.0, 0.0};
     
+    //mlp outputs
+    MLPoutput mlpOut;
+    std::array<float, 64> y1, a1, y2, a2; 
+    std::array<float, 4> y3, a3;
+    
+    //weights and biases initialization
+    std::array<std::array<float, 4>, 64> w1; 
+    std::array<std::array<float, 64>, 64> w2; 
+    std::array<std::array<float, 64>, 4> w3; 
+    std::array<float, 64> b1;
+    std::array<float, 64> b2;
+    std::array<float, 4> b3;
+    initWeightsAndBiases(w1, w2, w3, b1, b2, b3);
+    
+    //actions
+    float actionX;
+    float actionY;
+    std::vector<std::array<float, 2>> actions;
+
+    //return and episodes
     int totalReturn = 0;
+    std::vector<int> reward;
+    
     int numEpisodes = 1000;
+    int numIterations = 0; 
+
+    //distribution    
+    float muX;
+    float sigmaX;
+    float muY;
+    float sigmaY;
+    
+    
 
 
 
 
-    for(int e = 0; e < numEpisodes; e++){
+    for(int e = 0; e < numEpisodes; e++){        
+        //RESET
+        numIterations = 0;
+        t = 0.0;
+        stateQ = {1.0, 0.0, 0.0, 0.0};
+        stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
+        angularVelocity = {0.0, 0.0, 0.0};
+        velocity = {0.0, 0.0, 0.0};
+        position = {0.0, 0.0, 0.0};
+        psi = {0.0, 0.0};
+        totalReturn = 0;
+        actions.clear(); 
+        reward.clear(); 
+
+        //generate episode
         for(int i = 0; i < simTime; i++){
-            //*****TIME*****
+            //time and iterations
             t += dt;
+            numIterations ++;
             
             //state vector update
             stateVector[0] = psi[0];
             stateVector[1] = psi[1];
             stateVector[2] = angularVelocity[0];
             stateVector[3] = angularVelocity[1];
+
+            //mlp forward pass
+            mlpOut = mlp(stateVector, w1, w2, w3, b1, b2, b3);
+
+            //pre-activations and activations(to-do: cache these such that can do REINFORCE at end of ep)
+            y1 = mlpOut.y1;
+            a1 = mlpOut.a1;
+            y2 = mlpOut.y2;
+            a2 = mlpOut.a2;
+            y3 = mlpOut.y3;
+            a3 = mlpOut.a3;
+
+            //distribution parameters
+            muX = a3[0];
+            sigmaX = std::exp(a3[1]); 
+            muY = a3[2];
+            sigmaY = std::exp(a3[3]); 
+            
+            //action sampling 
+            std::normal_distribution<float> dX{muX, sigmaX};
+            std::normal_distribution<float> dY{muY, sigmaY}; 
+
+            actionX = dX(gen);
+            actionY = dY(gen);
+
+            actions.push_back({actionX, actionY});
 
             //*****WIND*****
             //sampling three independent turbulence streams at time t
@@ -136,7 +213,7 @@ int main(void){
             
             //*****COMPUTE FORCES*****
             //force due to thrust
-            thrustRf = forceThrustRf((currentServoX+servosXOffset)*DEG2RAD, (currentServoY+servosYOffset)*DEG2RAD, t);
+            thrustRf = forceThrustRf(deg2rad(actionX+servosXOffset), deg2rad(actionY+servosYOffset), t);
             thrustWf = rotateRfToWf(stateQ, thrustRf); 
 
             //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity
@@ -199,10 +276,26 @@ int main(void){
             //normalize quaterinon 
             normalizeQuaternion(stateQ);
 
-            //EULER ANGLES
+            //conver to euler angles
             psi = quaternionToEuler(stateQ); 
+
+            //reward update
+            if(psi[0] < 0.2 && psi[1] < 0.2){
+                reward.push_back(1);
+            }
+            else break;
         }
+        //for each iteration of the episode, apply the REINFORCE update
+        
+        //first get total return
+        for(int j = 0; j < (int)reward.size(); j++){ 
+            totalReturn += reward[j];
+        }
+
+        //TO-DO: REINFORCE update rule
+
     }
+    
 
 
     return 0;
