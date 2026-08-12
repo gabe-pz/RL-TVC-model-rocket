@@ -144,7 +144,7 @@ int main(void){
 
     while (!WindowShouldClose()){
         if(!landed){
-            //state update
+            //physics loop
             for(int i = 0; i < iterationsPerFrame; i++){
                 //*****TIME*****
                 t += dt;
