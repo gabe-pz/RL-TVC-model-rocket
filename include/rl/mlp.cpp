@@ -30,8 +30,8 @@ void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<s
     b3.fill(0.0f);
 }
 
-std::array<float, 4740> flatten_parameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
-    const std::array<std::array<float, 4>, 64>& w3,
+std::array<float, 4740> flattenParameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
+    const std::array<std::array<float, 64>, 4>& w3,
     const std::array<float, 4>& b3)
 {
 
@@ -67,8 +67,8 @@ std::array<float, 4740> flatten_parameters(const std::array<std::array<float, 4>
     }
 
     //w3
-    for(int i = 0; i < 64; i++){
-        for(int j = 0; j < 4; j++){
+    for(int i = 0; i < 4; i++){
+        for(int j = 0; j < 64; j++){
             output[index] = w3[i][j];
             index++;
         }
@@ -82,6 +82,49 @@ std::array<float, 4740> flatten_parameters(const std::array<std::array<float, 4>
 
     return output;
 } 
+void unflattenParameters(const std::array<float, 4740>& flattened,
+    std::array<std::array<float, 4>, 64>& w1, std::array<float, 64>& b1,
+    std::array<std::array<float, 64>, 64>& w2, std::array<float, 64>& b2,
+    std::array<std::array<float, 64>, 4>& w3, std::array<float, 4>& b3){
+
+        int index = 0;
+        //w1
+        for(int i = 0; i < 64; i++){
+            for(int j = 0; j < 4; j++){
+                w1[i][j] = flattened[index];
+                index++;
+            }
+        }
+        //b1
+        for(int i = 0; i < 64; i++){
+            b1[i] = flattened[index];
+            index++;
+        }
+        //w2
+        for(int i = 0; i < 64; i++){
+            for(int j = 0; j < 64; j++){
+                w2[i][j] = flattened[index];
+                index++;
+            }
+        }
+        //b2
+        for(int i = 0; i < 64; i++){
+            b2[i] = flattened[index];
+            index++;
+        }
+        //w3
+        for(int i = 0; i < 4; i++){
+            for(int j = 0; j < 64; j++){
+                w3[i][j] = flattened[index];
+                index++;
+            }
+        }
+        //b3
+        for(int i = 0; i < 4; i++){
+            b3[i] = flattened[index];
+            index++;
+        }
+}
 
 //*****Pre-activations and activations*****
 template<typename T, std::size_t in, std::size_t out>

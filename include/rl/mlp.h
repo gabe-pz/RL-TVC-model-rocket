@@ -12,10 +12,14 @@ float ReLU(float y);
 void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 64>, 4>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, 
     std::array<float, 4>& b3);
 
-
-std::array<float, 4740> flatten_parameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
-    const std::array<std::array<float, 4>, 64>& w3,
+std::array<float, 4740> flattenParameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
+    const std::array<std::array<float, 64>, 4>& w3,
     const std::array<float, 4>& b3);
+    
+void unflattenParameters(const std::array<float, 4740>& flattened,
+    std::array<std::array<float, 4>, 64>& w1, std::array<float, 64>& b1,
+    std::array<std::array<float, 64>, 64>& w2, std::array<float, 64>& b2,
+    std::array<std::array<float, 64>, 4>& w3, std::array<float, 4>& b3);
 
 //*****Pre-activations and activations*****
 template<typename T, std::size_t in, std::size_t out>

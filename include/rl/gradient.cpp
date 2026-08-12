@@ -20,36 +20,38 @@ float derivativePreactivationWrtWeight(const std::array<T, in>& vecIn, int j){
 
 //*****HELPER DERIVATIVE FUNCTIONS*****
 //sum term in expression for derivatives for z_k wrt weights and biases in first layer
-float sumDerivatives(int k, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 4>, 64>& w3, std::array<float, 64> y2){
-    float partialN = 0; 
-
+float sumDerivatives(int i, int k, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& y2){
+    float partialN = 0;
+    
     for(int n = 0; n < 64; n++){
-        partialN += derivativePreactivationWrtActivation(w3, k, n)*derivativeActivationWrtPreactivation(y2.at(n))*derivativePreactivationWrtActivation(w2, k, n);
+        partialN += derivativePreactivationWrtActivation(w3, k, n)   
+                  * derivativeActivationWrtPreactivation(y2.at(n)) 
+                  * derivativePreactivationWrtActivation(w2, n, i);  
     }
 
     return partialN;
 }
-
 //helper function that returns the common terms in each gradient componenet
-std::array<float, 4> mKTerms(const std::array<float, 4>& outputs,  const std::array<float, 2>& actions){
+std::array<float, 4> mKTerms(const std::array<float, 4>& outputs, const std::array<float, 2>& actions){
     std::array<float, 4> mK;
-
     for(int i = 0; i < 2; i++){
-        for(int k = 0; k < 4; k += 2){
-            mK.at(k) = (actions.at(i) - outputs.at(k)) / ((outputs.at(k+1)*outputs.at(k+1))*1.0f);
-            mK.at(k+1) = ((actions.at(i)-outputs.at(k)*actions.at(i)-outputs.at(k)) - (outputs.at(k+1)*outputs.at(k+1))) / (outputs.at(k+1)*outputs.at(k+1)*outputs.at(k+1));
-        }
+        int k = i * 2;
+        float diff = actions.at(i) - outputs.at(k);
+        float var  = outputs.at(k+1) * outputs.at(k+1);
+        mK.at(k)   = diff / var;
+        mK.at(k+1) = (diff*diff - var) / (var * outputs.at(k+1));
     }
-
     return mK;
 }
 
 //helper function that returns the sum of the partials of the product
-std::array<float, 4> partialsSummed(const std::array<float, 64>& y2, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 4>, 64>& w3){
-    std::array<float, 4> partialsN;
+std::array<std::array<float, 4>, 64> partialsSummed(const std::array<float, 64>& y2, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3){
+    std::array<std::array<float, 4>, 64> partialsN;
 
-    for(int n = 0; n < 4; n++){
-        partialsN.at(n) = sumDerivatives(n, w2, w3, y2);
+    for(int i = 0; i < 64; i++){
+        for(int k = 0; k < 4; k++){
+            partialsN.at(i).at(k) = sumDerivatives(i, k, w2, w3, y2);
+        }
     }   
 
     return partialsN;
@@ -69,14 +71,14 @@ float derivativeZkWrtB_1ij(std::array<float, 64> y1, std::array<float, 4> yOut, 
 }
 
 //expressions for derivative of z_k wrt weights and biases in 2nd layer
-float derivativeZkWrtW_2ij(const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<float, 64> a1, const std::array<std::array<float, 4>, 64>& w3, int i, int j, int k){
+float derivativeZkWrtW_2ij(const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<float, 64> a1, const std::array<std::array<float, 64>, 4>& w3, int i, int j, int k){
     float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
     float p2 = derivativePreactivationWrtActivation(w3, k, i);
     float p3 = derivativeActivationWrtPreactivation(y2.at(i));
     float p4 = derivativePreactivationWrtWeight(a1, j);
     return p1*p2*p3*p4;
 }
-float derivativeZkWrtB_2ij(const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<std::array<float, 4>, 64>& w3, int i, int k){
+float derivativeZkWrtB_2ij(const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<std::array<float, 64>, 4>& w3, int i, int k){
     float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
     float p2 = derivativePreactivationWrtActivation(w3, k, i);
     float p3 = derivativeActivationWrtPreactivation(y2.at(i));
@@ -98,7 +100,7 @@ float derivativeZkWrtB_3ij(const std::array<float, 4>& yOut, int k){
 
 //*****GRADIENTS*****
 //part 1 of gradients of log of the policies wrt to weights in first layer
-std::array<std::array<float, 64*4>, 2> gradientLogPoliciesW1(const std::array<double, 4>& stateVec, std::array<float, 64>& y1, const std::array<float, 4>& yOut, const std::array<float, 4>& mK, const std::array<float, 4>& partialsN){
+std::array<std::array<float, 64*4>, 2> gradientLogPoliciesW1(const std::array<double, 4>& stateVec, std::array<float, 64>& y1, const std::array<float, 4>& yOut, const std::array<float, 4>& mK, const std::array<std::array<float, 4>, 64>& partialsN){
     std::array<std::array<float, 64*4>, 2> gradients; 
     std::array<float, 64*4> gradientLogPolicyXW1;
     std::array<float, 64*4> gradientLogPolicyYW1;
@@ -106,13 +108,13 @@ std::array<std::array<float, 64*4>, 2> gradientLogPoliciesW1(const std::array<do
 
     for(int i = 0; i < 64; i++){
         for(int j = 0; j < 4; j++){
-            gradientLogPolicyXW1.at(i*4+j) = mK.at(0)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 0)*partialsN.at(0) + mK.at(1)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 1)*partialsN.at(1);
+            gradientLogPolicyXW1.at(i*4+j) = mK.at(0)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 0)*partialsN.at(i).at(0) + mK.at(1)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 1)*partialsN.at(i).at(1);
         }
     }
 
     for(int i = 0; i < 64; i++){
         for(int j = 0; j < 4; j++){
-            gradientLogPolicyYW1.at(i*4+j) = mK.at(2)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 2)*partialsN.at(2) + mK.at(3)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 3)*partialsN.at(3);
+            gradientLogPolicyYW1.at(i*4+j) = mK.at(2)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 2)*partialsN.at(i).at(2) + mK.at(3)*derivativeZkWrtW_1ij(stateVec, y1, yOut, i, j, 3)*partialsN.at(i).at(3);
         }
     }
 
@@ -124,17 +126,17 @@ std::array<std::array<float, 64*4>, 2> gradientLogPoliciesW1(const std::array<do
     return gradients; 
 }
 //part 2 of gradients of log of the policies wrt to biases in first layer
-std::array<std::array<float, 64>, 2> gradientLogPoliciesB1(const std::array<float, 64>& y1, const std::array<float, 4>& outputs, const std::array<float, 4>& mK, const std::array<float, 4>& partialsN){
+std::array<std::array<float, 64>, 2> gradientLogPoliciesB1(const std::array<float, 64>& y1, const std::array<float, 4>& outputs, const std::array<float, 4>& mK, const std::array<std::array<float, 4>, 64>& partialsN){
     std::array<std::array<float, 64>, 2> gradients; 
     std::array<float, 64> gradientLogPolicyXB1;
     std::array<float, 64> gradientLogPolicyYB1; 
 
     for(int i = 0; i < 64; i++){
-        gradientLogPolicyXB1.at(i) = mK.at(0)*derivativeZkWrtB_1ij(y1, outputs, i, 0)*partialsN.at(0) + mK.at(1)*derivativeZkWrtB_1ij(y1, outputs, i, 1)*partialsN.at(1);
+        gradientLogPolicyXB1.at(i) = mK.at(0)*derivativeZkWrtB_1ij(y1, outputs, i, 0)*partialsN.at(i).at(0) + mK.at(1)*derivativeZkWrtB_1ij(y1, outputs, i, 1)*partialsN.at(i).at(1);
     }
 
     for(int i = 0; i < 64; i++){
-        gradientLogPolicyYB1.at(i) = mK.at(2)*derivativeZkWrtB_1ij(y1, outputs, i, 2)*partialsN.at(2) + mK.at(3)*derivativeZkWrtB_1ij(y1, outputs, i, 3)*partialsN.at(3);
+        gradientLogPolicyYB1.at(i) = mK.at(2)*derivativeZkWrtB_1ij(y1, outputs, i, 2)*partialsN.at(i).at(2) + mK.at(3)*derivativeZkWrtB_1ij(y1, outputs, i, 3)*partialsN.at(i).at(3);
     }
 
     
@@ -146,7 +148,7 @@ std::array<std::array<float, 64>, 2> gradientLogPoliciesB1(const std::array<floa
 }
 
 //part 3 of gradients of log of the policies wrt to weights in the second layer
-std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> a1, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
+std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64> a1, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
     std::array<std::array<float, 64*64>, 2> outputs;
 
     std::array<float, 64*64> gradientLogPolicyXW2; 
@@ -171,8 +173,9 @@ std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<s
 
     return outputs;
 }
+
 //part 4 of gradients of log of the policies wrt to biases in the second layer
-std::array<std::array<float, 64>, 2> gradientLogPoliciesB2(const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
+std::array<std::array<float, 64>, 2> gradientLogPoliciesB2(const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
     std::array<std::array<float, 64>, 2> outputs;
 
     std::array<float, 64> gradientLogPolicyXB2; 

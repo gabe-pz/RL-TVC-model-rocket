@@ -7,8 +7,10 @@
 #include "../include/math/rocketMath.h"
 #include "../include/physics/rocketProperties.h"
 #include "../include/control/control.h"
-#include "../include/rl/mlp.h"
 
+#include "../include/rl/mlp.h"
+#include "../include/rl/gradient.h"
+#include "../include/rl/REINFORCE.h"
 int main(void){
 
     //*****ROCKET PROPERTIES*****
@@ -102,12 +104,14 @@ int main(void){
 
     //*****RL*****
     //state vector
-    std::array<double, 4> stateVector = {0.0, 0.0, 0.0, 0.0};
+    std::vector<std::array<double, 4>> stateVector;
     
     //mlp outputs
     MLPoutput mlpOut;
-    std::array<float, 64> y1, a1, y2, a2; 
-    std::array<float, 4> y3, a3;
+
+    std::vector<std::array<float, 64>> y1, a1, y2, a2; 
+    std::vector<std::array<float, 4>> y3, a3;  
+
     
     //weights and biases initialization
     std::array<std::array<float, 4>, 64> w1; 
@@ -129,16 +133,13 @@ int main(void){
     
     int numEpisodes = 1000;
     int numIterations = 0; 
-
-    //distribution    
+    float alpha = 0.02;
+    
+    //probability distribution    
     float muX;
     float sigmaX;
     float muY;
     float sigmaY;
-    
-    
-
-
 
 
     for(int e = 0; e < numEpisodes; e++){        
@@ -161,28 +162,24 @@ int main(void){
             t += dt;
             numIterations ++;
             
-            //state vector update
-            stateVector[0] = psi[0];
-            stateVector[1] = psi[1];
-            stateVector[2] = angularVelocity[0];
-            stateVector[3] = angularVelocity[1];
-
             //mlp forward pass
-            mlpOut = mlp(stateVector, w1, w2, w3, b1, b2, b3);
+            std::array<double, 4> state = {psi[0], psi[1], angularVelocity[0], angularVelocity[1]};
+            stateVector.push_back(state);
+            mlpOut = mlp(state, w1, w2, w3, b1, b2, b3);
 
             //pre-activations and activations(to-do: cache these such that can do REINFORCE at end of ep)
-            y1 = mlpOut.y1;
-            a1 = mlpOut.a1;
-            y2 = mlpOut.y2;
-            a2 = mlpOut.a2;
-            y3 = mlpOut.y3;
-            a3 = mlpOut.a3;
+            y1.push_back(mlpOut.y1);
+            a1.push_back(mlpOut.a1);
+            y2.push_back(mlpOut.y2);
+            a2.push_back(mlpOut.a2);
+            y3.push_back(mlpOut.y3);
+            a3.push_back(mlpOut.a3);
 
             //distribution parameters
-            muX = a3[0];
-            sigmaX = std::exp(a3[1]); 
-            muY = a3[2];
-            sigmaY = std::exp(a3[3]); 
+            muX = mlpOut.a3[0];
+            sigmaX = std::exp(mlpOut.a3[1]); 
+            muY = mlpOut.a3[2];
+            sigmaY = std::exp(mlpOut.a3[3]);; 
             
             //action sampling 
             std::normal_distribution<float> dX{muX, sigmaX};
@@ -285,14 +282,36 @@ int main(void){
             }
             else break;
         }
-        //for each iteration of the episode, apply the REINFORCE update
-        
-        //first get total return
-        for(int j = 0; j < (int)reward.size(); j++){ 
-            totalReturn += reward[j];
+        //total return for episode ran
+        for(int i = 0; i < (int)reward.size(); i++){ 
+            totalReturn += reward[i];
         }
 
-        //TO-DO: REINFORCE update rule
+        for(int i = 0; i < numIterations; i++){
+            std::array<float, 4> mk = mKTerms(a3[i], actions[i]);
+            std::array<std::array<float, 4>, 64> partialsN = partialsSummed(y2[i], w2, w3); 
+
+            std::array<std::array<float, 64*4>, 2> gW1 = gradientLogPoliciesW1(stateVector[i], y1[i], y3[i], mk, partialsN);
+            std::array<std::array<float, 64>, 2> gB1 = gradientLogPoliciesB1(y1[i], a3[i], mk, partialsN);
+            std::array<std::array<float, 64*64>, 2> gW2 = gradientLogPoliciesW2(w3, a1[i], y2[i], y3[i], mk);
+            std::array<std::array<float, 64>, 2> gB2 = gradientLogPoliciesB2(w3, y2[i], y3[i], mk);
+
+            std::array<std::array<float, 4*64>, 2> gW3 = gradientLogPoliciesW3(y3[i], a2[i], mk);
+            std::array<std::array<float, 4>, 2> gB3 = gradientLogPoliciesB3(y3[i], mk);
+
+            std::array<std::array<float, 4740>, 2> constructGrads = constructGradients(gW1, gB1, gW2, gB2, gW3, gB3);
+
+            std::array<float, 4740> gradX = constructGrads[0];
+            std::array<float, 4740> gradY = constructGrads[1];
+
+            std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, totalReturn);
+
+            std::array<float, 4740> parameters = flattenParameters(w1, b1, w2, b2, w3, b3);
+
+            REINFORCEupdate(parameters, gradTerm);
+
+            unflattenParameters(parameters, w1, b1, w2, b2, w3, b3);
+        }
 
     }
     
