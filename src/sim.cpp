@@ -3,12 +3,12 @@
 #include <array>
 
 
-#include "../include/windGeneration.h" 
-#include "../include/rocketMath.h"
-#include "../include/rocketProperties.h"
-#include "../include/control.h"
-#include "../include/log.h"
-#include "../include/raylibFunction.h"
+#include "../include/physics/windGeneration.h" 
+#include "../include/math/rocketMath.h"
+#include "../include/physics/rocketProperties.h"
+#include "../include/control/control.h"
+#include "../include/io/log.h"
+#include "../include/graphics/raylibFunction.h"
 
 int main(void){     
     //*****ROCKET PROPERTIES*****

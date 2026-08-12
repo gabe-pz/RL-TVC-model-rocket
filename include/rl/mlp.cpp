@@ -6,7 +6,7 @@ float ReLU(float y){
 }
 
 //*****FUNCTIONS FOR PARAMETERS*****
-void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 4>, 64>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, std::array<float, 4>& b3){
+void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 64>, 4>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, std::array<float, 4>& b3){
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-0.1f, 0.1f);
@@ -15,13 +15,12 @@ void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<s
     for(int i = 0; i < 64; i++){
         for(int j = 0; j < 4; j++){
             w1.at(i).at(j) = dist(gen);
-            w3.at(i).at(j) = dist(gen);
+            w3.at(j).at(i) = dist(gen);
         }
     }
     for(int i = 0; i < 64; i++){
         for(int j = 0; j < 64; j++){
-            w1.at(i).at(j) = dist(gen);
-            w3.at(i).at(j) = dist(gen);
+            w2.at(i).at(j) = dist(gen);
         }
     }
     
@@ -114,3 +113,18 @@ std::array<float, out> activations(std::array<float, out> y){
 
     return a;
 }
+
+std::array<arrayVariant, 6> mlp(const std::array<double, 4> s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
+    const std::array<float, 64>& b2, const std::array<float, 4>& b3){
+
+        std::array<float, 64> y1 = preActivations(w1, b1, s); 
+        std::array<float, 64> a1 = activations(y1);
+
+        std::array<float, 64> y2 = preActivations(w2, b2, a1); 
+        std::array<float, 64> a2 = activations(y2);
+
+        std::array<float, 4> y3 = preActivations(w3, b3, a2);
+        std::array<float, 4> a3 = activations(y3);
+
+        return {y1, a1, y2, a2, y3, a3};
+    }

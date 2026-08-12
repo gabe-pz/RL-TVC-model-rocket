@@ -2,8 +2,8 @@ CXX = g++
 CXXFLAGS = -Wall -g
 LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 TARGET = bin/sim
-SRC = src/sim.cpp $(wildcard include/*.cpp)
-HDR = $(wildcard include/*.h) 
+SRC = src/sim.cpp $(wildcard include/*/*.cpp)
+HDR = $(wildcard include/*/*.h) 
 
 .PHONY: run all clean
 

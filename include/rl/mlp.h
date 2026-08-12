@@ -2,13 +2,19 @@
 
 #include <random>
 #include <array>
+#include <variant> 
+
+using arrayVariant = std::variant<std::array<float, 64>, std::array<float, 4>>;
 
 //*****ACTIVATION FUNCTION*****
 float ReLU(float y);
 
 
 //*****FUNCTIONS FOR PARAMETERS*****
-void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 4>, 64>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, std::array<float, 4>& b3); 
+void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 64>, 4>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, 
+    std::array<float, 4>& b3);
+
+
 std::array<float, 4740> flatten_parameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
     const std::array<std::array<float, 4>, 64>& w3,
     const std::array<float, 4>& b3);
@@ -19,3 +25,8 @@ std::array<float, out> preActivations(const std::array<std::array<float, in>, ou
 
 template<std::size_t out>
 std::array<float, out> activations(std::array<float, out> y1);
+
+
+//****MLP*****
+std::array<arrayVariant, 6> mlp(const std::array<double, 4> s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 4>, 64>& w3, const std::array<float, 64>& b1, 
+    const std::array<float, 64>& b2, const std::array<float, 4>& b3);
