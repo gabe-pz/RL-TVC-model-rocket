@@ -127,13 +127,14 @@ int main(void){
     std::vector<std::array<float, 2>> rawActions;
 
     //return and episodes
-    int totalReturn = 0;
+    double totalReturn = 0.0;
     std::vector<int> reward;
     
-    int numEpisodes = 100000;
+    int numEpisodes = 700000;
     int numIterations = 0; 
-    float alpha = 0.001;
-    float gamma = 0.99;
+    
+    float alpha = 0.00001f;
+    float gamma = 0.99f;
     
     //probability distribution  
     std::vector<std::array<float, 4>> outputs; 
@@ -146,7 +147,6 @@ int main(void){
     double controlDt = 0.05;
     double timeSinceLastControl = controlDt;
 
-    int runningReturnSum = 0;
     for(int e = 0; e < numEpisodes; e++){        
         //RESET
         numIterations = 0;
@@ -158,7 +158,7 @@ int main(void){
         velocity = {0.0, 0.0, 0.0};
         position = {0.0, 0.0, 0.0};
         psi = {0.0, 0.0};
-        totalReturn = 0;
+        totalReturn = 0.0;
         rawActions.clear(); 
         reward.clear(); 
         y1.clear(); a1.clear();
@@ -310,7 +310,7 @@ int main(void){
         }
 
         for(int i = 0; i < numIterations; i++){
-            totalReturn = 0;
+            totalReturn = 0.0;
             for(int k = i; k < numIterations-1; k++){
                 totalReturn += std::pow(gamma, k-i)*reward.at(k);
             }
@@ -339,8 +339,9 @@ int main(void){
 
             unflattenParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
-        std::cout << "Data after episode " << e << ": TOTAL RETURN = " << reward.size() << ", TIME FLEW = " << numIterations*dt << "s" << std::endl;
+        if(e % 10000 == 0 && e > 0){
+            std::cout << "Data after episode " << e << ": TOTAL RETURN = " << reward.size() << ", TIME FLEW = " << numIterations*dt << "s" << std::endl;
+        }
     }
-    
     return 0;
 }

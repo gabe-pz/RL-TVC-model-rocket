@@ -39,7 +39,7 @@ std::array<float, 4> mKTerms(const std::array<float, 4>& outputs, const std::arr
         float diff = actions.at(i) - outputs.at(k);
         float var  = outputs.at(k+1) * outputs.at(k+1);
         mK.at(k)   = diff / var;
-        mK.at(k+1) = (diff*diff - var) / (var * outputs.at(k+1));
+        mK.at(k+1) = (diff*diff - var) / (var);
     }
     return mK;
 }
