@@ -2,7 +2,8 @@
 #include <array> 
 #include <cmath> 
 
-double clamp(double val, double min, double max);
+template<typename T>
+T clamp(T val, T min, T max);
 double rad2deg(double angle);
 double deg2rad(double angle); 
 

@@ -1,9 +1,8 @@
 CXX = g++
-CXXFLAGS = -Wall -g
-LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
-TARGET = bin/sim
-SRC = src/train.cpp $(wildcard include/*/*.cpp)
-HDR = $(wildcard include/*/*.h) 
+CXXFLAGS = -Wall -g -std=c++17
+TARGET = bin/train
+SRC = src/train.cpp $(filter-out include/graphics/%.cpp, $(wildcard include/*/*.cpp))
+HDR = $(filter-out include/graphics/%.h, $(wildcard include/*/*.h)) 
 
 .PHONY: run all clean
 
@@ -14,7 +13,7 @@ all: $(TARGET)
 
 $(TARGET): $(SRC) $(HDR)
 	mkdir -p bin
-	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
 
 clean:
 	rm -rf bin

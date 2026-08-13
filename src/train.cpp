@@ -2,6 +2,7 @@
 #include <vector> 
 #include <iostream> 
 #include <random> 
+#include <cmath> 
 
 #include "../include/physics/windGeneration.h" 
 #include "../include/math/rocketMath.h"
@@ -30,14 +31,10 @@ int main(void){
     
     //*****SIMULATION SETTINGS*****
     const double dt = 0.000001;
-    const int simTime = tBurn;
+    const double simTime = tBurn;
     const double gravity = 9.81;  
     const float rho = 1.187f;
     double t = 0.0;
-
-    //*****SERVO SETTINGS****
-    double currentServoX = 0.0;
-    double currentServoY = 0.0;
 
     //servos offsets 
     std::random_device rd;
@@ -123,29 +120,37 @@ int main(void){
     initWeightsAndBiases(w1, w2, w3, b1, b2, b3);
     
     //actions
+    float rawActionX;
+    float rawActionY;
     float actionX;
     float actionY;
-    std::vector<std::array<float, 2>> actions;
+    std::vector<std::array<float, 2>> rawActions;
 
     //return and episodes
     int totalReturn = 0;
     std::vector<int> reward;
     
-    int numEpisodes = 1000;
+    int numEpisodes = 100000;
     int numIterations = 0; 
-    float alpha = 0.02;
+    float alpha = 0.1;
+    float gamma = 0.99;
     
-    //probability distribution    
+    //probability distribution  
+    std::vector<std::array<float, 4>> outputs; 
     float muX;
     float sigmaX;
     float muY;
     float sigmaY;
 
+    //control time
+    double controlDt = 0.05;
+    double timeSinceLastControl = controlDt;
 
     for(int e = 0; e < numEpisodes; e++){        
         //RESET
         numIterations = 0;
         t = 0.0;
+        timeSinceLastControl = controlDt;
         stateQ = {1.0, 0.0, 0.0, 0.0};
         stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
         angularVelocity = {0.0, 0.0, 0.0};
@@ -153,42 +158,68 @@ int main(void){
         position = {0.0, 0.0, 0.0};
         psi = {0.0, 0.0};
         totalReturn = 0;
-        actions.clear(); 
+        rawActions.clear(); 
         reward.clear(); 
+        y1.clear(); a1.clear();
+        y2.clear(); a2.clear();
+        y3.clear(); a3.clear();
+        stateVector.clear();
+        outputs.clear();
 
         //generate episode
-        for(int i = 0; i < simTime; i++){
+        for(int i = 0; i < (int)(simTime/dt); i++){
             //time and iterations
             t += dt;
-            numIterations ++;
-            
-            //mlp forward pass
-            std::array<double, 4> state = {psi[0], psi[1], angularVelocity[0], angularVelocity[1]};
-            stateVector.push_back(state);
-            mlpOut = mlp(state, w1, w2, w3, b1, b2, b3);
+            timeSinceLastControl += dt;
 
-            //pre-activations and activations(to-do: cache these such that can do REINFORCE at end of ep)
-            y1.push_back(mlpOut.y1);
-            a1.push_back(mlpOut.a1);
-            y2.push_back(mlpOut.y2);
-            a2.push_back(mlpOut.a2);
-            y3.push_back(mlpOut.y3);
-            a3.push_back(mlpOut.a3);
+            if(timeSinceLastControl >= controlDt){
+                timeSinceLastControl = 0.0; 
+                
+                //reward update
+                if(numIterations > 0){
+                    if(std::abs(psi[0]) < 0.2 && std::abs(psi[1]) < 0.2){
+                        reward.push_back(1);
+                    }
+                    else break;
+                }
+                //increment another step
+                numIterations ++;
 
-            //distribution parameters
-            muX = mlpOut.a3[0];
-            sigmaX = std::exp(mlpOut.a3[1]); 
-            muY = mlpOut.a3[2];
-            sigmaY = std::exp(mlpOut.a3[3]);; 
-            
-            //action sampling 
-            std::normal_distribution<float> dX{muX, sigmaX};
-            std::normal_distribution<float> dY{muY, sigmaY}; 
+                //mlp forward pass
+                std::array<double, 4> state = {psi[0], psi[1], angularVelocity[0], angularVelocity[1]};
+                stateVector.push_back(state);
+                mlpOut = mlp(state, w1, w2, w3, b1, b2, b3);
 
-            actionX = dX(gen);
-            actionY = dY(gen);
+                //pre-activations and activations
+                y1.push_back(mlpOut.y1);
+                a1.push_back(mlpOut.a1);
+                y2.push_back(mlpOut.y2);
+                a2.push_back(mlpOut.a2);
+                y3.push_back(mlpOut.y3);
+                a3.push_back(mlpOut.a3);
 
-            actions.push_back({actionX, actionY});
+
+                //distribution parameters
+                muX = mlpOut.a3[0];
+                sigmaX = std::exp(mlpOut.a3[1]);//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which keeps it positive
+                muY = mlpOut.a3[2];
+                sigmaY = std::exp(mlpOut.a3[3]);
+                outputs.push_back({muX, sigmaX, muY, sigmaY});
+
+                //action sampling 
+                std::normal_distribution<float> dX{muX, sigmaX};
+                std::normal_distribution<float> dY{muY, sigmaY}; 
+                
+                rawActionX = dX(gen);
+                rawActionY = dY(gen); 
+                
+                //clamp actions to domain of [-5, 5]
+                actionX = 5*std::tanh(rawActionX);
+                actionY = 5*std::tanh(rawActionY);
+
+                //log raw actions sampled from distribution
+                rawActions.push_back({rawActionX, rawActionY});
+            }
 
             //*****WIND*****
             //sampling three independent turbulence streams at time t
@@ -210,7 +241,7 @@ int main(void){
             
             //*****COMPUTE FORCES*****
             //force due to thrust
-            thrustRf = forceThrustRf(deg2rad(actionX+servosXOffset), deg2rad(actionY+servosYOffset), t);
+            thrustRf = forceThrustRf(deg2rad(-1*(actionX+servosXOffset)), deg2rad(actionY+servosYOffset), t);
             thrustWf = rotateRfToWf(stateQ, thrustRf); 
 
             //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity
@@ -275,20 +306,15 @@ int main(void){
 
             //conver to euler angles
             psi = quaternionToEuler(stateQ); 
-
-            //reward update
-            if(psi[0] < 0.2 && psi[1] < 0.2){
-                reward.push_back(1);
-            }
-            else break;
-        }
-        //total return for episode ran
-        for(int i = 0; i < (int)reward.size(); i++){ 
-            totalReturn += reward[i];
         }
 
         for(int i = 0; i < numIterations; i++){
-            std::array<float, 4> mk = mKTerms(a3[i], actions[i]);
+            totalReturn = 0;
+            for(int k = i; k < numIterations-1; k++){
+                totalReturn += std::pow(gamma, k-i)*reward.at(k);
+            }
+            
+            std::array<float, 4> mk = mKTerms(outputs[i], rawActions[i]);
             std::array<std::array<float, 4>, 64> partialsN = partialsSummed(y2[i], w2, w3); 
 
             std::array<std::array<float, 64*4>, 2> gW1 = gradientLogPoliciesW1(stateVector[i], y1[i], y3[i], mk, partialsN);
@@ -312,10 +338,7 @@ int main(void){
 
             unflattenParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
-
     }
     
-
-
     return 0;
 }
