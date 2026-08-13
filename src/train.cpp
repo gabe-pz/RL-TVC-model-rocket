@@ -130,10 +130,10 @@ int main(void){
     double totalReturn = 0.0;
     std::vector<int> reward;
     
-    int numEpisodes = 700000;
+    int numEpisodes = 1000000;
     int numIterations = 0; 
     
-    float alpha = 0.00001f;
+    float alpha = 0.0001f;
     float gamma = 0.99f;
     
     //probability distribution  

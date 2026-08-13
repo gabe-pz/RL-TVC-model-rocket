@@ -87,14 +87,23 @@ float derivativeZkWrtB_2ij(const std::array<float, 64>& y2, const std::array<flo
 }
 
 //expressions for derivative of z_k wrt weights and biases in 3rd layer
-float derivativeZkWrtW_3ij(const std::array<float, 4>& yOut, const std::array<float, 64> a2, int j, int k){
-    float p1 = 1.0f;
-    float p2 = derivativePreactivationWrtWeight(a2, j);
-    return p1*p2;
+float derivativeZkWrtW_3ij(const std::array<float, 4>& yOut, const std::array<float, 64> a2, int i, int j, int k){
+
+    if(i == k){
+        float p1 = 1.0f;
+        float p2 = derivativePreactivationWrtWeight(a2, j);
+        return p1*p2;
+    }
+    else return 0.0f;
+    
 }
-float derivativeZkWrtB_3ij(const std::array<float, 4>& yOut, int k){
-    float p1 = 1.0f;
-    return p1*1.0f;
+float derivativeZkWrtB_3ij(const std::array<float, 4>& yOut, int i, int k){
+
+    if(i == k){
+        float p1 = 1.0f;
+        return p1*1.0f;
+    } 
+    else return 0.0f;
 }
 
 
@@ -208,7 +217,7 @@ std::array<std::array<float, 4*64>, 2> gradientLogPoliciesW3(const std::array<fl
     //x
     for(int i = 0; i < 4; i++){
         for(int j = 0; j < 64; j++){
-            gradientLogPolicyXW3.at(i*64+j) = mK.at(0)*derivativeZkWrtW_3ij(yOut, a2, j, 0)+mK.at(1)*derivativeZkWrtW_3ij(yOut, a2, j, 1);
+            gradientLogPolicyXW3.at(i*64+j) = mK.at(0)*derivativeZkWrtW_3ij(yOut, a2, i, j, 0)+mK.at(1)*derivativeZkWrtW_3ij(yOut, a2, i, j, 1);
         }
     }
 
@@ -216,7 +225,7 @@ std::array<std::array<float, 4*64>, 2> gradientLogPoliciesW3(const std::array<fl
     //y
     for(int i = 0; i < 4; i++){
         for(int j = 0; j < 64; j++){
-            gradientLogPolicyYW3.at(i*64+j) = mK.at(2)*derivativeZkWrtW_3ij(yOut, a2, j, 2)+mK.at(3)*derivativeZkWrtW_3ij(yOut, a2, j, 3);
+            gradientLogPolicyYW3.at(i*64+j) = mK.at(2)*derivativeZkWrtW_3ij(yOut, a2, i, j, 2)+mK.at(3)*derivativeZkWrtW_3ij(yOut, a2, i, j, 3);
         }
     }
 
@@ -234,13 +243,13 @@ std::array<std::array<float, 4>, 2> gradientLogPoliciesB3(const std::array<float
 
     //x
     for(int i = 0; i < 4; i++){
-        gradientLogPolicyXB3.at(i) = mK.at(0)*derivativeZkWrtB_3ij(yOut, 0) + mK.at(1)*derivativeZkWrtB_3ij(yOut, 1); 
+        gradientLogPolicyXB3.at(i) = mK.at(0)*derivativeZkWrtB_3ij(yOut, i, 0) + mK.at(1)*derivativeZkWrtB_3ij(yOut, i, 1); 
     }
 
 
-    //x
+    //y
     for(int i = 0; i < 4; i++){
-        gradientLogPolicyYB3.at(i) = mK.at(2)*derivativeZkWrtB_3ij(yOut, 2) + mK.at(3)*derivativeZkWrtB_3ij(yOut, 3); 
+        gradientLogPolicyYB3.at(i) = mK.at(2)*derivativeZkWrtB_3ij(yOut, i, 2) + mK.at(3)*derivativeZkWrtB_3ij(yOut, i, 3); 
     }
 
     outputs.at(0) = gradientLogPolicyXB3;
