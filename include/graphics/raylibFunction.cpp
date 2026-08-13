@@ -3,8 +3,8 @@
 Camera3D raylibInit(int FPS){
     //*****RAYLIB INITALIZATION*****
     //viewing screen
-    int screenWidth  = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
+    int screenWidth  = 3500;
+    int screenHeight = 2000;
     InitWindow(screenWidth, screenHeight, "tvc-model-rocket-sim");
 
     //raylib syncing things

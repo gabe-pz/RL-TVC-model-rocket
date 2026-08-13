@@ -1,13 +1,14 @@
 #include <iostream>
 #include <random> 
 #include <array>
-
+#include <fstream>
 
 #include "../include/physics/windGeneration.h" 
 #include "../include/math/rocketMath.h"
 #include "../include/physics/rocketProperties.h"
-#include "../include/control/control.h"
+#include "../include/control/rlControl.h"
 #include "../include/io/log.h"
+#include "../include/io/saveAndLoad.h"
 #include "../include/graphics/raylibFunction.h"
 
 int main(void){     
@@ -64,39 +65,25 @@ int main(void){
     bool printedCoasted = false;
     bool printedApogee = false; 
 
-    //****PID SETTINGS*****
-    //control vars
-    double desiredX = 0.0;
-    double desiredY = 0.0;
-    double prevErrorX = 0.0;
-    double prevErrorY = 0.0;
+    //*****CONTROL*****
+    std::array<float, 2> policyOutputs;
+    float actionX = 0.0f;
+    float actionY = 0.0f;
     
-    //servo position init
-    double currentServoX = 0.0;
-    double currentServoY = 0.0;
-
-    //servos offsets 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(1.0f, 2.25f);//misalignment between 0.5 and 1 degree
-    float servosXOffset = dist(gen);
-    float servosYOffset = dist(gen);
 
     //speed to run control at
-    const double controlDt = 0.0001; 
-    double timeSinceLastControl = controlDt; //start here such that have control on first run
+    const double controlDt = 0.05; 
+    double timeSinceLastControl = controlDt; 
 
-    //max angular v(deg/sec) for servos
-    const double maxRate = 250.0;         
-
-    //pid gains
-    std::array<double, 3> pidGainsX = {1, 0.3, 0.15}; //(pGain, iGain, dGain)
-    std::array<double, 3> pidGainsY = {1, 0.3, 0.1};
-
-    //pid terms init
-    std::array<double, 3> pidArrayX = {0.0, 0.0, 0.0}; // (pTerm, iTerm, dTerm) 
-    std::array<double, 3> pidArrayY = {0.0, 0.0, 0.0};
-
+    //weights and biases
+    std::array<std::array<float, 4>, 64> w1; 
+    std::array<std::array<float, 64>, 64> w2; 
+    std::array<std::array<float, 64>, 4> w3; 
+    std::array<float, 64> b1;
+    std::array<float, 64> b2;
+    std::array<float, 4> b3;
+    loadParameters(w1, w2, w3, b1, b2, b3);
+    
 
     //*****RAYLIB INITALIZATION*****
     int FPS = 60;  
@@ -109,7 +96,7 @@ int main(void){
     //*******STD ARRAY INITALIZATIONS*****
     //quaterion initaliztion
     std::array<double, 4> stateQ = {1.0, 0.0, 0.0, 0.0};
-    std::array<double, 4> stateQTimeDerivative = {1.0, 0.0, 0.0, 0.0};
+    std::array<double, 4> stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
     std::array<double, 4> angularVelocityQ = {1.0, 0.0, 0.0, 0.0};
 
     //forces initalization
@@ -142,6 +129,9 @@ int main(void){
     //wind velocity initalization
     std::array<double, 3> windVelocityWf = {0.0, 0.0, 0.0};
 
+
+    std::array<double, 4> stateVector;
+
     while (!WindowShouldClose()){
         if(!landed){
             //physics loop
@@ -152,13 +142,15 @@ int main(void){
 
                 //******PID CONTROL*****z
                 if(timeSinceLastControl >= controlDt){
-                    pidControl(pidArrayX, pidGainsX, prevErrorX, desiredX, psi[0], controlDt, 0);
-                    pidControl(pidArrayY, pidGainsY, prevErrorY, desiredY, psi[1], controlDt, 1);
-                    timeSinceLastControl = 0.0; //go back one period
-                }
-                
-                
+                    stateVector = {psi[0], psi[1], angularVelocity[0], angularVelocity[1]};
 
+                    policyOutputs = policy(stateVector, w1, w2, w3, b1, b2, b3);
+
+                    actionX = policyOutputs[0];
+                    actionY = policyOutputs[1];
+
+                    timeSinceLastControl = 0.0;
+                }
 
                 //*****WIND*****
                 //sampling three independent turbulence streams at time t
@@ -180,7 +172,7 @@ int main(void){
                 
                 //*****COMPUTE FORCES*****
                 //force due to thrust
-                thrustRf = forceThrustRf((currentServoX+servosXOffset)*DEG2RAD, (currentServoY+servosYOffset)*DEG2RAD, t);
+                thrustRf = forceThrustRf(actionX, actionY, t);
                 thrustWf = rotateRfToWf(stateQ, thrustRf); 
 
                 //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity
@@ -248,6 +240,7 @@ int main(void){
                 
                 
                 //*****STATE CHECKS*****
+                
                     //*****LANDING CHECK*****
                     if(position[2] < 0 && t > 0.5){
                         landed = true; 

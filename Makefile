@@ -1,19 +1,18 @@
 CXX = g++
-CXXFLAGS = -Wall -O2 -std=c++17
-TARGET = bin/train
-SRC = src/train.cpp $(filter-out include/graphics/%.cpp, $(wildcard include/*/*.cpp))
-HDR = $(filter-out include/graphics/%.h, $(wildcard include/*/*.h)) 
 
-.PHONY: run all clean
+.PHONY: sim train clean
 
-run: all
-	./$(TARGET)
-
-all: $(TARGET)
-
-$(TARGET): $(SRC) $(HDR)
+#Build & run rlSim
+sim:
 	mkdir -p bin
-	$(CXX) $(CXXFLAGS) $(SRC) -o $(TARGET)
+	$(CXX) -Wall -g -Iinclude src/rlSim.cpp $(shell find include -name '*.cpp') -o bin/rlSim -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+	./bin/rlSim
+
+#Build & run train
+train:
+	mkdir -p bin
+	$(CXX) -Wall -O2 -std=c++17 src/train.cpp $(filter-out include/graphics/%.cpp, $(wildcard include/*/*.cpp)) -o bin/train
+	./bin/train
 
 clean:
 	rm -rf bin

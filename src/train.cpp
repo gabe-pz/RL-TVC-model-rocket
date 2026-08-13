@@ -12,6 +12,9 @@
 #include "../include/rl/mlp.h"
 #include "../include/rl/gradient.h"
 #include "../include/rl/REINFORCE.h"
+#include "../include/io/saveAndLoad.h"
+
+
 int main(void){
 
     //*****ROCKET PROPERTIES*****
@@ -132,9 +135,9 @@ int main(void){
     int numIterations = 0; 
     
     //hyperparameters
-    float alpha = 0.0002f;
+    float alpha = 0.0001f;
     float gamma = 0.75f;
-    float a = 1.0f;
+    float a = 3.0f;
 
     //control 
     double controlDt = 0.05;
@@ -356,8 +359,8 @@ int main(void){
             std::cout << "FLIGHT TIME AFTER " << e << " EPISODES = " << numIterations*controlDt << "s" << std::endl;
             std::cout << "*************************************************************" << std::endl;
         }
-
-
     }
+
+    saveParameters(w1, w2, w3, b1, b2, b3);
     return 0;
 }

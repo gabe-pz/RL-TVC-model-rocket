@@ -171,3 +171,19 @@ MLPoutput mlp(const std::array<double, 4>& s, const std::array<std::array<float,
 
         return {y1, a1, y2, a2, y3, a3};
     }
+
+
+std::array<float, 4> mlpControl(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
+    const std::array<float, 64>& b2, const std::array<float, 4>& b3){
+
+        std::array<float, 64> y1 = preActivations(w1, b1, s); 
+        std::array<float, 64> a1 = activations(y1);
+
+        std::array<float, 64> y2 = preActivations(w2, b2, a1); 
+        std::array<float, 64> a2 = activations(y2);
+
+        std::array<float, 4> y3 = preActivations(w3, b3, a2);
+        std::array<float, 4> a3 = y3;
+
+        return a3;
+}
