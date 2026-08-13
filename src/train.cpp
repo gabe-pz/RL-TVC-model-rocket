@@ -39,23 +39,15 @@ int main(void){
     //servos offsets 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(1.0f, 2.25f);//misalignment between 0.5 and 1 degree
-    float servosXOffset = dist(gen);
-    float servosYOffset = dist(gen);
+    std::uniform_real_distribution<float> dist(0.1f, 0.5f);//misalignment between 0.1 and 5 degree
        
 
     //*****WIND SETTINGS*****
     //wind generation constants
-    unsigned int seed = 12345;
-    int n = (int)(simTime * GEN_FREQ) + 2;
     double U         = 5.0;  //average wind velocity
     double intensity = 0.20; //turbulence intensity 
     double sigmaU    = intensity * U;
     
-    //wind turbulence buffers
-    std::vector<double> pinkU = generatePinkNoise(n, seed);
-    std::vector<double> pinkV = generatePinkNoise(n, seed + 1);
-    std::vector<double> pinkW = generatePinkNoise(n, seed + 2);
 
     //mean-wind heading in world frame
     double theta = 0.0;
@@ -103,12 +95,14 @@ int main(void){
     //state vector
     std::vector<std::array<double, 4>> stateVector;
     
-    //mlp outputs
+    //mlp
     MLPoutput mlpOut;
 
     std::vector<std::array<float, 64>> y1, a1, y2, a2; 
     std::vector<std::array<float, 4>> y3, a3;  
-
+    
+    //network outputs
+    std::vector<std::array<float, 4>> outputs; 
     
     //weights and biases initialization
     std::array<std::array<float, 4>, 64> w1; 
@@ -118,36 +112,44 @@ int main(void){
     std::array<float, 64> b2;
     std::array<float, 4> b3;
     initWeightsAndBiases(w1, w2, w3, b1, b2, b3);
-    
+        
     //actions
-    float rawActionX;
-    float rawActionY;
-    float actionX;
-    float actionY;
+    float rawActionX = 0.0f;
+    float rawActionY = 0.0f;
+    float actionX = 0.0f;
+    float actionY = 0.0f;
+
+    //storing the raw outputs for mkTerms
     std::vector<std::array<float, 2>> rawActions;
 
-    //return and episodes
+    //return and reward
     double totalReturn = 0.0;
     std::vector<int> reward;
-    
+    float gamma = 0.99f;
+
+    //episodes and counter
     int numEpisodes = 1000000;
     int numIterations = 0; 
     
-    float alpha = 0.0001f;
-    float gamma = 0.99f;
-    
-    //probability distribution  
-    std::vector<std::array<float, 4>> outputs; 
-    float muX;
-    float sigmaX;
-    float muY;
-    float sigmaY;
+    //hyperparameters
+    float alpha = 0.0005f;
 
-    //control time
+    //control 
     double controlDt = 0.05;
     double timeSinceLastControl = controlDt;
 
-    for(int e = 0; e < numEpisodes; e++){        
+    for(int e = 0; e < numEpisodes; e++){      
+        //new random wind per episode
+        unsigned int episodeSeed = rd();
+        int n = (int)(simTime * GEN_FREQ) + 2;
+        std::vector<double> pinkU = generatePinkNoise(n, episodeSeed);
+        std::vector<double> pinkV = generatePinkNoise(n, episodeSeed + 1);
+        std::vector<double> pinkW = generatePinkNoise(n, episodeSeed + 2);
+
+        //new random offset per episode
+        float servosXOffset = dist(gen);
+        float servosYOffset = dist(gen);  
+        
         //RESET
         numIterations = 0;
         t = 0.0;
@@ -176,13 +178,17 @@ int main(void){
             if(timeSinceLastControl >= controlDt){
                 timeSinceLastControl = 0.0; 
                 
-                //reward update
                 if(numIterations > 0){
+                    //reward update
                     if(std::abs(psi[0]) < 0.2 && std::abs(psi[1]) < 0.2){
                         reward.push_back(1);
                     }
-                    else break;
+                    else{
+                        reward.push_back(-1);
+                        break;
+                    }
                 }
+
                 //increment another step
                 numIterations ++;
 
@@ -201,10 +207,10 @@ int main(void){
 
 
                 //distribution parameters
-                muX = mlpOut.a3[0];
-                sigmaX = std::exp(mlpOut.a3[1]);//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which keeps it positive
-                muY = mlpOut.a3[2];
-                sigmaY = std::exp(mlpOut.a3[3]);
+                float muX = mlpOut.a3[0];
+                float sigmaX = std::exp(mlpOut.a3[1]);//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which keeps it positive
+                float muY = mlpOut.a3[2];
+                float sigmaY = std::exp(mlpOut.a3[3]);
                 outputs.push_back({muX, sigmaX, muY, sigmaY});
 
                 //action sampling 
@@ -311,8 +317,8 @@ int main(void){
 
         for(int i = 0; i < numIterations; i++){
             totalReturn = 0.0;
-            for(int k = i; k < numIterations-1; k++){
-                totalReturn += std::pow(gamma, k-i)*reward.at(k);
+            for(int k = i; k < (int)reward.size(); k++){
+                totalReturn += std::pow(gamma, k-i) * reward[k];
             }
             
             std::array<float, 4> mk = mKTerms(outputs[i], rawActions[i]);
@@ -337,10 +343,10 @@ int main(void){
 
             REINFORCEupdate(parameters, gradTerm);
 
-            unflattenParameters(parameters, w1, b1, w2, b2, w3, b3);
+            updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
         if(e % 10000 == 0 && e > 0){
-            std::cout << "Data after episode " << e << ": TOTAL RETURN = " << reward.size() << ", TIME FLEW = " << numIterations*dt << "s" << std::endl;
+            std::cout << "Data after episode " << e << ": TIME FLEW = " << numIterations*controlDt << "s" << std::endl;
         }
     }
     return 0;

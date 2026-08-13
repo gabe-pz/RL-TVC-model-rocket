@@ -16,7 +16,7 @@ std::array<float, 4740> flattenParameters(const std::array<std::array<float, 4>,
     const std::array<std::array<float, 64>, 4>& w3,
     const std::array<float, 4>& b3);
     
-void unflattenParameters(const std::array<float, 4740>& flattened,
+void updateParameters(const std::array<float, 4740>& flattened,
     std::array<std::array<float, 4>, 64>& w1, std::array<float, 64>& b1,
     std::array<std::array<float, 64>, 64>& w2, std::array<float, 64>& b2,
     std::array<std::array<float, 64>, 4>& w3, std::array<float, 4>& b3);
