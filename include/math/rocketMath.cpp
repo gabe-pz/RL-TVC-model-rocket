@@ -1,7 +1,7 @@
 #include "rocketMath.h"
 
-template<typename T>
-T clamp(T val, T min, T max){
+
+double clamp(double val, double min, double max){
     if(val < min) return min;
     else if(val > max) return max;
     else return val;

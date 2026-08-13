@@ -167,7 +167,7 @@ MLPoutput mlp(const std::array<double, 4>& s, const std::array<std::array<float,
         std::array<float, 64> a2 = activations(y2);
 
         std::array<float, 4> y3 = preActivations(w3, b3, a2);
-        std::array<float, 4> a3 = activations(y3);
+        std::array<float, 4> a3 = y3;
 
         return {y1, a1, y2, a2, y3, a3};
     }

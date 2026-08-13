@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -Wall -g -std=c++17
+CXXFLAGS = -Wall -O2 -std=c++17
 TARGET = bin/train
 SRC = src/train.cpp $(filter-out include/graphics/%.cpp, $(wildcard include/*/*.cpp))
 HDR = $(filter-out include/graphics/%.h, $(wildcard include/*/*.h)) 

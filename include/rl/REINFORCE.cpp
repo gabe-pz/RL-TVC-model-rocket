@@ -5,7 +5,7 @@ std::array<float, 4740> gradientTerm(const std::array<float, 4740>& gradX, const
     std::array<float, 4740> gradTerm;
 
     for(int i = 0; i < 4740; i++){
-        gradTerm[i] = alpha*G*gradX[i]+gradY[i];
+        gradTerm[i] = alpha*G*(gradX[i]+gradY[i]);
     }
 
     return gradTerm;

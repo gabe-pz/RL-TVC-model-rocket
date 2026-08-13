@@ -59,27 +59,27 @@ std::array<std::array<float, 4>, 64> partialsSummed(const std::array<float, 64>&
 
 //The product of the three derivatives in the expression for the derivatives of z_k wrt weights and biases in 1st layer
 float derivativeZkWrtW_1ij(const std::array<double, 4>& stateVec, const std::array<float, 64>& y1, const std::array<float, 4>& yOut, int i, int j, int k){
-    float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
+    float p1 = 1.0f;
     float p2 = derivativeActivationWrtPreactivation(y1.at(i));
     float p3 = derivativePreactivationWrtWeight(stateVec, j);
     return p1*p2*p3;
 }
 float derivativeZkWrtB_1ij(std::array<float, 64> y1, std::array<float, 4> yOut, int i, int k){
-    float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
+    float p1 = 1.0f;
     float p2 = derivativeActivationWrtPreactivation(y1.at(i));
     return p1*p2*1.0f;
 }
 
 //expressions for derivative of z_k wrt weights and biases in 2nd layer
 float derivativeZkWrtW_2ij(const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<float, 64> a1, const std::array<std::array<float, 64>, 4>& w3, int i, int j, int k){
-    float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
+    float p1 = 1.0f;
     float p2 = derivativePreactivationWrtActivation(w3, k, i);
     float p3 = derivativeActivationWrtPreactivation(y2.at(i));
     float p4 = derivativePreactivationWrtWeight(a1, j);
     return p1*p2*p3*p4;
 }
 float derivativeZkWrtB_2ij(const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<std::array<float, 64>, 4>& w3, int i, int k){
-    float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
+    float p1 = 1.0f;
     float p2 = derivativePreactivationWrtActivation(w3, k, i);
     float p3 = derivativeActivationWrtPreactivation(y2.at(i));
     float p4 = 1.0f;
@@ -88,12 +88,12 @@ float derivativeZkWrtB_2ij(const std::array<float, 64>& y2, const std::array<flo
 
 //expressions for derivative of z_k wrt weights and biases in 3rd layer
 float derivativeZkWrtW_3ij(const std::array<float, 4>& yOut, const std::array<float, 64> a2, int j, int k){
-    float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
+    float p1 = 1.0f;
     float p2 = derivativePreactivationWrtWeight(a2, j);
     return p1*p2;
 }
 float derivativeZkWrtB_3ij(const std::array<float, 4>& yOut, int k){
-    float p1 = derivativeActivationWrtPreactivation(yOut.at(k));
+    float p1 = 1.0f;
     return p1*1.0f;
 }
 

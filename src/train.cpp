@@ -7,7 +7,7 @@
 #include "../include/physics/windGeneration.h" 
 #include "../include/math/rocketMath.h"
 #include "../include/physics/rocketProperties.h"
-#include "../include/control/control.h"
+
 
 #include "../include/rl/mlp.h"
 #include "../include/rl/gradient.h"
@@ -30,7 +30,7 @@ int main(void){
     long double Iyy = 0.0249868814;
     
     //*****SIMULATION SETTINGS*****
-    const double dt = 0.000001;
+    const double dt = 0.0001;
     const double simTime = tBurn;
     const double gravity = 9.81;  
     const float rho = 1.187f;
@@ -132,7 +132,7 @@ int main(void){
     
     int numEpisodes = 100000;
     int numIterations = 0; 
-    float alpha = 0.1;
+    float alpha = 0.001;
     float gamma = 0.99;
     
     //probability distribution  
@@ -146,6 +146,7 @@ int main(void){
     double controlDt = 0.05;
     double timeSinceLastControl = controlDt;
 
+    int runningReturnSum = 0;
     for(int e = 0; e < numEpisodes; e++){        
         //RESET
         numIterations = 0;
@@ -241,7 +242,7 @@ int main(void){
             
             //*****COMPUTE FORCES*****
             //force due to thrust
-            thrustRf = forceThrustRf(deg2rad(-1*(actionX+servosXOffset)), deg2rad(actionY+servosYOffset), t);
+            thrustRf = forceThrustRf(deg2rad((actionX+servosXOffset)), deg2rad(actionY+servosYOffset), t);
             thrustWf = rotateRfToWf(stateQ, thrustRf); 
 
             //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity
@@ -338,6 +339,7 @@ int main(void){
 
             unflattenParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
+        std::cout << "Data after episode " << e << ": TOTAL RETURN = " << reward.size() << ", TIME FLEW = " << numIterations*dt << "s" << std::endl;
     }
     
     return 0;
