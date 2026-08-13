@@ -124,6 +124,7 @@ int main(void){
     //return and reward
     double totalReturn = 0.0;
     std::vector<double> reward;
+    double accumlatedReturn = 0.0;
    
 
     //episodes and counter
@@ -180,6 +181,12 @@ int main(void){
                 timeSinceLastControl = 0.0; 
                 
                 if(numIterations > 0){
+
+                    if(std::abs(psi[0]) > 0.2 || std::abs(psi[1]) > 0.2){
+                        reward.push_back(-10);         
+                        break;
+                    }
+                    
                     //reward update
                     reward.push_back(std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])));         
                 }
@@ -341,11 +348,16 @@ int main(void){
 
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
+        accumlatedReturn += totalReturn;
 
         //simple logging
         if(e % 10000 == 0 && e > 0){
-            std::cout << "Data after episode " << e << ": TIME FLEW = " << numIterations*controlDt << "s" << std::endl;
+            std::cout << "AVERAGE RETURN AFTER " << e << " EPISODES = " << (accumlatedReturn / e*1.0) << std::endl;
+            std::cout << "FLIGHT TIME AFTER " << e << " EPISODES = " << numIterations*controlDt << "s" << std::endl;
+            std::cout << "*************************************************************" << std::endl;
         }
+
+
     }
     return 0;
 }
