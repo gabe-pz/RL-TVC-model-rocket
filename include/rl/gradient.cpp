@@ -14,7 +14,7 @@ float derivativePreactivationWrtActivation(const std::array<std::array<float, in
 
 template<typename T, std::size_t in>
 float derivativePreactivationWrtWeight(const std::array<T, in>& vecIn, int j){
-    return vecIn.at(j)*1.0f;
+    return vecIn.at(j);
 } 
 
 
@@ -87,7 +87,7 @@ float derivativeZkWrtB_2ij(const std::array<float, 64>& y2, const std::array<flo
 }
 
 //expressions for derivative of z_k wrt weights and biases in 3rd layer
-float derivativeZkWrtW_3ij(const std::array<float, 4>& yOut, const std::array<float, 64> a2, int i, int j, int k){
+float derivativeZkWrtW_3ij(const std::array<float, 4>& yOut, const std::array<float, 64>& a2, int i, int j, int k){
 
     if(i == k){
         float p1 = 1.0f;
@@ -157,7 +157,7 @@ std::array<std::array<float, 64>, 2> gradientLogPoliciesB1(const std::array<floa
 }
 
 //part 3 of gradients of log of the policies wrt to weights in the second layer
-std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64> a1, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
+std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& a1, const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<float, 4>& mK){
     std::array<std::array<float, 64*64>, 2> outputs;
 
     std::array<float, 64*64> gradientLogPolicyXW2; 
@@ -184,7 +184,7 @@ std::array<std::array<float, 64*64>, 2> gradientLogPoliciesW2(const std::array<s
 }
 
 //part 4 of gradients of log of the policies wrt to biases in the second layer
-std::array<std::array<float, 64>, 2> gradientLogPoliciesB2(const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64> y2, const std::array<float, 4> yOut, const std::array<float, 4>& mK){
+std::array<std::array<float, 64>, 2> gradientLogPoliciesB2(const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& y2, const std::array<float, 4>& yOut, const std::array<float, 4>& mK){
     std::array<std::array<float, 64>, 2> outputs;
 
     std::array<float, 64> gradientLogPolicyXB2; 
@@ -208,7 +208,7 @@ std::array<std::array<float, 64>, 2> gradientLogPoliciesB2(const std::array<std:
 
 
 //part 5 of gradients of log of the policies wrt to weights in the third layer
-std::array<std::array<float, 4*64>, 2> gradientLogPoliciesW3(const std::array<float, 4>& yOut, const std::array<float, 64> a2, const std::array<float, 4>& mK){
+std::array<std::array<float, 4*64>, 2> gradientLogPoliciesW3(const std::array<float, 4>& yOut, const std::array<float, 64>& a2, const std::array<float, 4>& mK){
     std::array<std::array<float, 4*64>, 2> outputs;
 
     std::array<float, 4*64> gradientLogPolicyXW3;

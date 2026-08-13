@@ -39,7 +39,6 @@ int main(void){
     //servos offsets 
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(0.1f, 0.5f);//misalignment between 0.1 and 5 degree
        
 
     //*****WIND SETTINGS*****
@@ -124,15 +123,17 @@ int main(void){
 
     //return and reward
     double totalReturn = 0.0;
-    std::vector<int> reward;
-    float gamma = 0.99f;
+    std::vector<double> reward;
+   
 
     //episodes and counter
     int numEpisodes = 1000000;
     int numIterations = 0; 
     
     //hyperparameters
-    float alpha = 0.0005f;
+    float alpha = 0.0002f;
+    float gamma = 0.75f;
+    float a = 1.0f;
 
     //control 
     double controlDt = 0.05;
@@ -146,21 +147,21 @@ int main(void){
         std::vector<double> pinkV = generatePinkNoise(n, episodeSeed + 1);
         std::vector<double> pinkW = generatePinkNoise(n, episodeSeed + 2);
 
-        //new random offset per episode
-        float servosXOffset = dist(gen);
-        float servosYOffset = dist(gen);  
-        
+
         //RESET
         numIterations = 0;
         t = 0.0;
         timeSinceLastControl = controlDt;
+
         stateQ = {1.0, 0.0, 0.0, 0.0};
         stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
         angularVelocity = {0.0, 0.0, 0.0};
         velocity = {0.0, 0.0, 0.0};
         position = {0.0, 0.0, 0.0};
         psi = {0.0, 0.0};
-        totalReturn = 0.0;
+
+        totalReturn = 0.0; 
+
         rawActions.clear(); 
         reward.clear(); 
         y1.clear(); a1.clear();
@@ -180,13 +181,7 @@ int main(void){
                 
                 if(numIterations > 0){
                     //reward update
-                    if(std::abs(psi[0]) < 0.2 && std::abs(psi[1]) < 0.2){
-                        reward.push_back(1);
-                    }
-                    else{
-                        reward.push_back(-1);
-                        break;
-                    }
+                    reward.push_back(std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])));         
                 }
 
                 //increment another step
@@ -208,7 +203,7 @@ int main(void){
 
                 //distribution parameters
                 float muX = mlpOut.a3[0];
-                float sigmaX = std::exp(mlpOut.a3[1]);//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which keeps it positive
+                float sigmaX = std::exp(mlpOut.a3[1]);//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
                 float muY = mlpOut.a3[2];
                 float sigmaY = std::exp(mlpOut.a3[3]);
                 outputs.push_back({muX, sigmaX, muY, sigmaY});
@@ -248,7 +243,7 @@ int main(void){
             
             //*****COMPUTE FORCES*****
             //force due to thrust
-            thrustRf = forceThrustRf(deg2rad((actionX+servosXOffset)), deg2rad(actionY+servosYOffset), t);
+            thrustRf = forceThrustRf(actionX, actionY, t);
             thrustWf = rotateRfToWf(stateQ, thrustRf); 
 
             //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity
@@ -315,6 +310,7 @@ int main(void){
             psi = quaternionToEuler(stateQ); 
         }
 
+        //REINFORCE
         for(int i = 0; i < numIterations; i++){
             totalReturn = 0.0;
             for(int k = i; k < (int)reward.size(); k++){
@@ -345,6 +341,8 @@ int main(void){
 
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
+
+        //simple logging
         if(e % 10000 == 0 && e > 0){
             std::cout << "Data after episode " << e << ": TIME FLEW = " << numIterations*controlDt << "s" << std::endl;
         }
