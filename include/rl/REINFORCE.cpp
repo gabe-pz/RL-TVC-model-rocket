@@ -3,9 +3,9 @@
 //Gradient term REINFORCE
 std::array<float, 4740> gradientTerm(const std::array<float, 4740>& gradX, const std::array<float, 4740>& gradY, float alpha, float G){
     std::array<float, 4740> gradTerm;
-
+    float maxStep = 0.1;
     for(int i = 0; i < 4740; i++){
-        gradTerm[i] = alpha*G*(gradX[i]+gradY[i]);
+        gradTerm[i] = std::clamp(alpha*G*(gradX[i]+gradY[i]), -maxStep, maxStep); 
     }
 
     return gradTerm;

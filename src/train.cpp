@@ -130,6 +130,7 @@ int main(void){
     double accumlatedReturn = 0.0;
     double accumlatedFlightTime = 0.0;
     double totalReturn = 0.0;
+    int episodesInWindow = 0;
 
     //episodes and counter
     int numEpisodes = 100000;
@@ -168,6 +169,7 @@ int main(void){
         psi = {0.0, 0.0};
 
         returnT = 0.0; 
+        accumlatedReward = 0.0;
 
         rawActions.clear(); 
         reward.clear(); 
@@ -185,14 +187,14 @@ int main(void){
                 
                 if(numIterations > 0){
 
-                    if(std::abs(psi[0]) > 0.25 || std::abs(psi[1]) > 0.25){
-                        reward.push_back(-10);       
-                        accumlatedReward += -10;     
+                    if(std::abs(psi[0]) > 0.34 || std::abs(psi[1]) > 0.34){
+                        reward.push_back(-numIterations*0.5);       
+                        accumlatedReward += -numIterations*0.5;     
                         break;
                     }
-                    
+                
                     //reward update
-                    double rewardT = std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])) - b*(angularVelocity[0]*angularVelocity[0] + angularVelocity[1]*angularVelocity[1]);
+                    double rewardT = std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1]));
                     reward.push_back(rewardT);    
                     accumlatedReward += rewardT;     
                 }
@@ -209,9 +211,9 @@ int main(void){
 
                 //distribution parameters
                 float muX = mlpControlOut[0];
-                float sigmaX = std::exp(std::clamp(mlpControlOut[1], -4.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
+                float sigmaX = std::exp(std::clamp(mlpControlOut[1], -2.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
                 float muY = mlpControlOut[2];
-                float sigmaY = std::exp(std::clamp(mlpControlOut[3], -4.0f, 2.0f));
+                float sigmaY = std::exp(std::clamp(mlpControlOut[3], -2.0f, 2.0f));
 
                 //action sampling 
                 std::normal_distribution<float> dX{muX, sigmaX};
@@ -374,27 +376,24 @@ int main(void){
 
             REINFORCEupdate(parameters, gradTerm);
             
-            // std::cout << sigmaX << std::endl;
-            // if(std::isnan(sigmaX)){
-            //     std::cout << "NAN" << std::endl;
-            //     break;
-            // }
                     
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
 
         accumlatedReturn += totalReturn;
         accumlatedFlightTime += numIterations*controlDt;
+        episodesInWindow ++; 
 
         //simple logging
         if((e % 1000 == 0 && e > 0) || e == numEpisodes - 1){
             std::cout << "*************************************************************" << std::endl;
             std::cout << "DATA AFTER " << e << " EPISODES: " << std::endl; 
-            std::cout << "AVERAGE RETURN = " << (accumlatedReturn / e*1.0) << std::endl;
-            std::cout << "AVERAGE FLIGHT TIME = " << (accumlatedFlightTime / e*1.0) << "s" << std::endl;
+            std::cout << "AVERAGE RETURN = " << (accumlatedReturn / episodesInWindow) << std::endl;
+            std::cout << "AVERAGE FLIGHT TIME = " << (accumlatedFlightTime / episodesInWindow) << "s" << std::endl;
 
             accumlatedReturn = 0.0;
             accumlatedFlightTime = 0.0;
+            episodesInWindow = 0.0;
         }
     }
 
