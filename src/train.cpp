@@ -122,25 +122,29 @@ int main(void){
     std::vector<std::array<float, 2>> rawActions;
 
     //return and reward
-    double totalReturn = 0.0;
+    double returnT = 0.0;
     std::vector<double> reward;
+    double accumlatedReward = 0.0;
+
+    //logging
     double accumlatedReturn = 0.0;
-   
+    double accumlatedFlightTime = 0.0;
+    double totalReturn = 0.0;
 
     //episodes and counter
-    int numEpisodes = 10000;
+    int numEpisodes = 100000;
     int numIterations = 0; 
     
     //hyperparameters
     float alpha = 0.0001f;
-    float gamma = 0.45f;
-    float a = 3.0f;
+    float gamma = 0.75f;
+    float a = 2.0f;
     float b = 2.0f;
 
     //control 
     double controlDt = 0.05;
     double timeSinceLastControl = controlDt;
-    double accumlatedFlightTime = 0.0;
+
 
     for(int e = 0; e < numEpisodes; e++){      
         //new random wind per episode
@@ -163,7 +167,7 @@ int main(void){
         position = {0.0, 0.0, 0.0};
         psi = {0.0, 0.0};
 
-        totalReturn = 0.0; 
+        returnT = 0.0; 
 
         rawActions.clear(); 
         reward.clear(); 
@@ -182,13 +186,15 @@ int main(void){
                 if(numIterations > 0){
 
                     if(std::abs(psi[0]) > 0.25 || std::abs(psi[1]) > 0.25){
-                        reward.push_back(-10);         
+                        reward.push_back(-10);       
+                        accumlatedReward += -10;     
                         break;
                     }
                     
                     //reward update
                     double rewardT = std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])) - b*(angularVelocity[0]*angularVelocity[0] + angularVelocity[1]*angularVelocity[1]);
-                    reward.push_back(rewardT);         
+                    reward.push_back(rewardT);    
+                    accumlatedReward += rewardT;     
                 }
 
                 //increment another step
@@ -308,14 +314,23 @@ int main(void){
             //conver to euler angles
             psi = quaternionToEuler(stateQ); 
         }
+        
+        //log the averageReward from that episode
+        double averageReward = accumlatedReward / numIterations;
 
         //REINFORCE
         for(int i = 0; i < numIterations; i++){
-            //return at t
-            totalReturn = 0.0;
+        
+            //return
+            returnT = 0.0;
             for(int k = i; k < (int)reward.size(); k++){
-                totalReturn += std::pow(gamma, k-i) * reward[k];
+                returnT += std::pow(gamma, k-i) * reward[k];
+                //log total return for current Episode
+                if(i == 0 && k == (int)reward.size()-1){
+                    totalReturn = returnT;
+                }  
             }
+
 
             //forward pass
             mlpOut = mlp(stateVector[i], w1, w2, w3, b1, b2, b3); 
@@ -329,14 +344,12 @@ int main(void){
             std::array<float, 64> a2 = mlpOut.a2;
             std::array<float, 4> a3 = mlpOut.a3; 
             
-
-
+            //outputs
             float muX = a3[0];
-            float sigmaX = std::exp(std::clamp(a3[1], -4.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
+            float sigmaX = std::exp(std::clamp(a3[1], -4.0f, 2.0f));
             float muY = a3[2];
             float sigmaY = std::exp(std::clamp(a3[3], -4.0f, 2.0f));
 
-            
             //gradient calculation
             std::array<float, 4> mk = mKTerms({muX, sigmaX, muY, sigmaY}, rawActions[i]);
             std::array<std::array<float, 4>, 64> partialsN = partialsSummed(y2, w2, w3); 
@@ -354,13 +367,19 @@ int main(void){
             std::array<float, 4740> gradX = constructGrads[0];
             std::array<float, 4740> gradY = constructGrads[1];
 
-            std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, totalReturn);
+            std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, (returnT-averageReward));
             
             //update parameters with gradient term
             std::array<float, 4740> parameters = flattenParameters(w1, b1, w2, b2, w3, b3);
 
             REINFORCEupdate(parameters, gradTerm);
-
+            
+            // std::cout << sigmaX << std::endl;
+            // if(std::isnan(sigmaX)){
+            //     std::cout << "NAN" << std::endl;
+            //     break;
+            // }
+                    
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
 
@@ -368,15 +387,17 @@ int main(void){
         accumlatedFlightTime += numIterations*controlDt;
 
         //simple logging
-        if(e % 10000 == 0 && e > 0){
+        if((e % 1000 == 0 && e > 0) || e == numEpisodes - 1){
             std::cout << "*************************************************************" << std::endl;
             std::cout << "DATA AFTER " << e << " EPISODES: " << std::endl; 
             std::cout << "AVERAGE RETURN = " << (accumlatedReturn / e*1.0) << std::endl;
             std::cout << "AVERAGE FLIGHT TIME = " << (accumlatedFlightTime / e*1.0) << "s" << std::endl;
+
+            accumlatedReturn = 0.0;
+            accumlatedFlightTime = 0.0;
         }
     }
 
     saveParameters(w1, w2, w3, b1, b2, b3);
-    std::cout << w1[1][2] << std::endl;
     return 0;
 }
