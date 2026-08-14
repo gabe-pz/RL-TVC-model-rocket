@@ -133,13 +133,13 @@ int main(void){
     int episodesInWindow = 0;
 
     //episodes and counter
-    int numEpisodes = 100000;
+    int numEpisodes = 1000000;
     int numIterations = 0; 
     
     //hyperparameters
     float alpha = 0.0001f;
     float gamma = 0.75f;
-    float a = 2.0f;
+    float a = 20.0f;
     float b = 2.0f;
 
     //control 
@@ -188,8 +188,8 @@ int main(void){
                 if(numIterations > 0){
 
                     if(std::abs(psi[0]) > 0.34 || std::abs(psi[1]) > 0.34){
-                        reward.push_back(-numIterations*0.5);       
-                        accumlatedReward += -numIterations*0.5;     
+                        reward.push_back(-10.0);       
+                        accumlatedReward += -10;     
                         break;
                     }
                 
@@ -222,9 +222,9 @@ int main(void){
                 rawActionX = dX(gen);
                 rawActionY = dY(gen); 
                 
-                //clamp actions to domain of [-5, 5]
-                actionX = 5*std::tanh(rawActionX);
-                actionY = 5*std::tanh(rawActionY);
+                //clamp actions to domain of [-5 deg, 5 deg]
+                actionX = 0.1*std::tanh(rawActionX);
+                actionY = 0.1*std::tanh(rawActionY);
 
                 //log raw actions sampled from distribution
                 rawActions.push_back({rawActionX, rawActionY});
@@ -348,9 +348,9 @@ int main(void){
             
             //outputs
             float muX = a3[0];
-            float sigmaX = std::exp(std::clamp(a3[1], -4.0f, 2.0f));
+            float sigmaX = std::exp(std::clamp(a3[1], -2.0f, 2.0f));
             float muY = a3[2];
-            float sigmaY = std::exp(std::clamp(a3[3], -4.0f, 2.0f));
+            float sigmaY = std::exp(std::clamp(a3[3], -2.0f, 2.0f));
 
             //gradient calculation
             std::array<float, 4> mk = mKTerms({muX, sigmaX, muY, sigmaY}, rawActions[i]);
@@ -385,7 +385,7 @@ int main(void){
         episodesInWindow ++; 
 
         //simple logging
-        if((e % 1000 == 0 && e > 0) || e == numEpisodes - 1){
+        if((e % 10000 == 0 && e > 0) || e == numEpisodes - 1){
             std::cout << "*************************************************************" << std::endl;
             std::cout << "DATA AFTER " << e << " EPISODES: " << std::endl; 
             std::cout << "AVERAGE RETURN = " << (accumlatedReturn / episodesInWindow) << std::endl;
