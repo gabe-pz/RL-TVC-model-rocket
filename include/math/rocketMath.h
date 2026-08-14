@@ -1,8 +1,8 @@
 #pragma once 
 #include <array> 
 #include <cmath> 
+#include <algorithm>
 
-double clamp(double val, double min, double max);
 double rad2deg(double angle);
 double deg2rad(double angle); 
 

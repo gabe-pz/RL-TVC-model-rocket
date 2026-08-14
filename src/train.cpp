@@ -3,6 +3,7 @@
 #include <iostream> 
 #include <random> 
 #include <cmath> 
+#include <algorithm> 
 
 #include "../include/physics/windGeneration.h" 
 #include "../include/math/rocketMath.h"
@@ -16,7 +17,6 @@
 
 
 int main(void){
-
     //*****ROCKET PROPERTIES*****
     //aerodynamic constants
     const double centerOfPressure = 0.0877;
@@ -131,17 +131,19 @@ int main(void){
    
 
     //episodes and counter
-    int numEpisodes = 1000000;
+    int numEpisodes = 100000;
     int numIterations = 0; 
     
     //hyperparameters
     float alpha = 0.0001f;
-    float gamma = 0.75f;
+    float gamma = 0.45f;
     float a = 3.0f;
+    float b = 2.0f;
 
     //control 
     double controlDt = 0.05;
     double timeSinceLastControl = controlDt;
+    double accumlatedFlightTime = 0.0;
 
     for(int e = 0; e < numEpisodes; e++){      
         //new random wind per episode
@@ -185,13 +187,14 @@ int main(void){
                 
                 if(numIterations > 0){
 
-                    if(std::abs(psi[0]) > 0.2 || std::abs(psi[1]) > 0.2){
+                    if(std::abs(psi[0]) > 0.25 || std::abs(psi[1]) > 0.25){
                         reward.push_back(-10);         
                         break;
                     }
                     
                     //reward update
-                    reward.push_back(std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])));         
+                    double rewardT = std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])) - b*(angularVelocity[0] + angularVelocity[1]);
+                    reward.push_back(rewardT);         
                 }
 
                 //increment another step
@@ -209,7 +212,6 @@ int main(void){
                 a2.push_back(mlpOut.a2);
                 y3.push_back(mlpOut.y3);
                 a3.push_back(mlpOut.a3);
-
 
                 //distribution parameters
                 float muX = mlpOut.a3[0];
@@ -352,15 +354,18 @@ int main(void){
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
         accumlatedReturn += totalReturn;
+        accumlatedFlightTime += numIterations*controlDt;
 
         //simple logging
         if(e % 10000 == 0 && e > 0){
-            std::cout << "AVERAGE RETURN AFTER " << e << " EPISODES = " << (accumlatedReturn / e*1.0) << std::endl;
-            std::cout << "FLIGHT TIME AFTER " << e << " EPISODES = " << numIterations*controlDt << "s" << std::endl;
             std::cout << "*************************************************************" << std::endl;
+            std::cout << "DATA AFTER " << e << " EPISODES: " << std::endl; 
+            std::cout << "AVERAGE RETURN = " << (accumlatedReturn / e*1.0) << std::endl;
+            std::cout << "AVERAGE FLIGHT TIME = " << (accumlatedFlightTime / e*1.0) << "s" << std::endl;
         }
     }
 
     saveParameters(w1, w2, w3, b1, b2, b3);
+    std::cout << w1[1][2] << std::endl;
     return 0;
 }

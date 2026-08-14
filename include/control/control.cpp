@@ -9,7 +9,7 @@ void pidControl(std::array<double, 3>& pidArray, const std::array<double, 3>& pi
     double pTerm = pidGains[0]*error; 
 
     //i
-    pidArray[1] =  clamp(pidArray[1] + dt*pidGains[1]*error, -5.0, 5.0); //write to pidArray iTerm
+    pidArray[1] =  std::clamp(pidArray[1] + dt*pidGains[1]*error, -5.0, 5.0); //write to pidArray iTerm
     double iTerm = pidArray[1]; //update iTerm to be used in total output
 
     //d
@@ -21,9 +21,9 @@ void pidControl(std::array<double, 3>& pidArray, const std::array<double, 3>& pi
 
     //computing angles need to move for each axis(0 is x, 1 is y) and clamping
     if(axis == 0){ 
-        desiredAngle = clamp(-output, -maxOut, maxOut);
+        desiredAngle = std::clamp(-output, -maxOut, maxOut);
     }
     else{
-        desiredAngle = clamp(output, -maxOut, maxOut);
+        desiredAngle = std::clamp(output, -maxOut, maxOut);
     }
 }

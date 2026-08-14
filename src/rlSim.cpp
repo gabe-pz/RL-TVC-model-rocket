@@ -67,6 +67,9 @@ int main(void){
 
     //*****CONTROL*****
     std::array<float, 2> policyOutputs;
+    float rawActionX = 0.0f;
+    float rawActionY = 0.0f;
+    
     float actionX = 0.0f;
     float actionY = 0.0f;
     
@@ -83,6 +86,7 @@ int main(void){
     std::array<float, 64> b2;
     std::array<float, 4> b3;
     loadParameters(w1, w2, w3, b1, b2, b3);
+    std::cout << w1[1][2] << std::endl;
     
 
     //*****RAYLIB INITALIZATION*****
@@ -146,8 +150,11 @@ int main(void){
 
                     policyOutputs = policy(stateVector, w1, w2, w3, b1, b2, b3);
 
-                    actionX = policyOutputs[0];
-                    actionY = policyOutputs[1];
+                    rawActionX = policyOutputs[0];
+                    rawActionY = policyOutputs[1];
+
+                    actionX = 5*std::tanh(rawActionX);
+                    actionY = 5*std::tanh(rawActionY);
 
                     timeSinceLastControl = 0.0;
                 }

@@ -1,12 +1,7 @@
 #include "rocketMath.h"
 
 
-double clamp(double val, double min, double max){
-    if(val < min) return min;
-    else if(val > max) return max;
-    else return val;
 
-}
 double rad2deg(double angle){
     //input rads, out degs 
     
@@ -70,7 +65,7 @@ std::array<double, 3> crossProduct(const std::array<double, 3>& a, const std::ar
 }
 std::array<double, 2> quaternionToEuler(const std::array<double, 4>& stateQuaternion){
 
-    double aSinArg = clamp(2*(stateQuaternion[0]*stateQuaternion[2] - stateQuaternion[1]*stateQuaternion[3]), -1.0, 1.0);
+    double aSinArg = std::clamp(2*(stateQuaternion[0]*stateQuaternion[2] - stateQuaternion[1]*stateQuaternion[3]), -1.0, 1.0);
 
     double aTan2Arg1 = 2*(stateQuaternion[0]*stateQuaternion[1]+stateQuaternion[2]*stateQuaternion[3]);
     double aTan2Arg2 = 1-2*(stateQuaternion[1]*stateQuaternion[1]+stateQuaternion[2]*stateQuaternion[2]); 
