@@ -99,12 +99,9 @@ int main(void){
     
     //mlp
     MLPoutput mlpOut;
-
-    std::vector<std::array<float, 64>> y1, a1, y2, a2; 
-    std::vector<std::array<float, 4>> y3, a3;  
     
     //network outputs
-    std::vector<std::array<float, 4>> outputs; 
+    std::array<float, 4> mlpControlOut; 
     
     //weights and biases initialization
     std::array<std::array<float, 4>, 64> w1; 
@@ -131,7 +128,7 @@ int main(void){
    
 
     //episodes and counter
-    int numEpisodes = 100000;
+    int numEpisodes = 10000;
     int numIterations = 0; 
     
     //hyperparameters
@@ -170,18 +167,15 @@ int main(void){
 
         rawActions.clear(); 
         reward.clear(); 
-        y1.clear(); a1.clear();
-        y2.clear(); a2.clear();
-        y3.clear(); a3.clear();
         stateVector.clear();
-        outputs.clear();
 
         //generate episode
         for(int i = 0; i < (int)(simTime/dt); i++){
             //time and iterations
             t += dt;
             timeSinceLastControl += dt;
-
+            
+            //*****CONTROL*****
             if(timeSinceLastControl >= controlDt){
                 timeSinceLastControl = 0.0; 
                 
@@ -193,32 +187,25 @@ int main(void){
                     }
                     
                     //reward update
-                    double rewardT = std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])) - b*(angularVelocity[0] + angularVelocity[1]);
+                    double rewardT = std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1])) - b*(angularVelocity[0]*angularVelocity[0] + angularVelocity[1]*angularVelocity[1]);
                     reward.push_back(rewardT);         
                 }
 
                 //increment another step
                 numIterations ++;
 
-                //mlp forward pass
+                //log and save state
                 std::array<double, 4> state = {psi[0], psi[1], angularVelocity[0], angularVelocity[1]};
                 stateVector.push_back(state);
-                mlpOut = mlp(state, w1, w2, w3, b1, b2, b3);
-
-                //pre-activations and activations
-                y1.push_back(mlpOut.y1);
-                a1.push_back(mlpOut.a1);
-                y2.push_back(mlpOut.y2);
-                a2.push_back(mlpOut.a2);
-                y3.push_back(mlpOut.y3);
-                a3.push_back(mlpOut.a3);
+                
+                //mlp forward pass 
+                mlpControlOut = mlpControl(state, w1, w2, w3, b1, b2, b3);
 
                 //distribution parameters
-                float muX = mlpOut.a3[0];
-                float sigmaX = std::exp(mlpOut.a3[1]);//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
-                float muY = mlpOut.a3[2];
-                float sigmaY = std::exp(mlpOut.a3[3]);
-                outputs.push_back({muX, sigmaX, muY, sigmaY});
+                float muX = mlpControlOut[0];
+                float sigmaX = std::exp(std::clamp(mlpControlOut[1], -4.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
+                float muY = mlpControlOut[2];
+                float sigmaY = std::exp(std::clamp(mlpControlOut[3], -4.0f, 2.0f));
 
                 //action sampling 
                 std::normal_distribution<float> dX{muX, sigmaX};
@@ -324,21 +311,43 @@ int main(void){
 
         //REINFORCE
         for(int i = 0; i < numIterations; i++){
+            //return at t
             totalReturn = 0.0;
             for(int k = i; k < (int)reward.size(); k++){
                 totalReturn += std::pow(gamma, k-i) * reward[k];
             }
+
+            //forward pass
+            mlpOut = mlp(stateVector[i], w1, w2, w3, b1, b2, b3); 
             
-            std::array<float, 4> mk = mKTerms(outputs[i], rawActions[i]);
-            std::array<std::array<float, 4>, 64> partialsN = partialsSummed(y2[i], w2, w3); 
+            //log pre-activations and activations 
+            std::array<float, 64> y1 = mlpOut.y1;
+            std::array<float, 64> y2 = mlpOut.y2;
+            std::array<float, 4> y3 = mlpOut.y3;
 
-            std::array<std::array<float, 64*4>, 2> gW1 = gradientLogPoliciesW1(stateVector[i], y1[i], y3[i], mk, partialsN);
-            std::array<std::array<float, 64>, 2> gB1 = gradientLogPoliciesB1(y1[i], a3[i], mk, partialsN);
-            std::array<std::array<float, 64*64>, 2> gW2 = gradientLogPoliciesW2(w3, a1[i], y2[i], y3[i], mk);
-            std::array<std::array<float, 64>, 2> gB2 = gradientLogPoliciesB2(w3, y2[i], y3[i], mk);
+            std::array<float, 64> a1 = mlpOut.a1;
+            std::array<float, 64> a2 = mlpOut.a2;
+            std::array<float, 4> a3 = mlpOut.a3; 
+            
 
-            std::array<std::array<float, 4*64>, 2> gW3 = gradientLogPoliciesW3(y3[i], a2[i], mk);
-            std::array<std::array<float, 4>, 2> gB3 = gradientLogPoliciesB3(y3[i], mk);
+
+            float muX = a3[0];
+            float sigmaX = std::exp(std::clamp(a3[1], -4.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
+            float muY = a3[2];
+            float sigmaY = std::exp(std::clamp(a3[3], -4.0f, 2.0f));
+
+            
+            //gradient calculation
+            std::array<float, 4> mk = mKTerms({muX, sigmaX, muY, sigmaY}, rawActions[i]);
+            std::array<std::array<float, 4>, 64> partialsN = partialsSummed(y2, w2, w3); 
+
+            std::array<std::array<float, 64*4>, 2> gW1 = gradientLogPoliciesW1(stateVector[i], y1, y3, mk, partialsN);
+            std::array<std::array<float, 64>, 2> gB1 = gradientLogPoliciesB1(y1, a3, mk, partialsN);
+            std::array<std::array<float, 64*64>, 2> gW2 = gradientLogPoliciesW2(w3, a1, y2, y3, mk);
+            std::array<std::array<float, 64>, 2> gB2 = gradientLogPoliciesB2(w3, y2, y3, mk);
+
+            std::array<std::array<float, 4*64>, 2> gW3 = gradientLogPoliciesW3(y3, a2, mk);
+            std::array<std::array<float, 4>, 2> gB3 = gradientLogPoliciesB3(y3, mk);
 
             std::array<std::array<float, 4740>, 2> constructGrads = constructGradients(gW1, gB1, gW2, gB2, gW3, gB3);
 
@@ -346,13 +355,15 @@ int main(void){
             std::array<float, 4740> gradY = constructGrads[1];
 
             std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, totalReturn);
-
+            
+            //update parameters with gradient term
             std::array<float, 4740> parameters = flattenParameters(w1, b1, w2, b2, w3, b3);
 
             REINFORCEupdate(parameters, gradTerm);
 
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
+
         accumlatedReturn += totalReturn;
         accumlatedFlightTime += numIterations*controlDt;
 

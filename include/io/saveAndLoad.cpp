@@ -4,7 +4,7 @@
 void saveParameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, 
     const std::array<float, 64>& b1, const std::array<float, 64>& b2, const std::array<float, 4>& b3){
    
-    std::ofstream out("../weights.bin", std::ios::binary);
+    std::ofstream out("weights.bin", std::ios::binary);
     
     out.write(reinterpret_cast<const char*>(&w1), sizeof(w1));
     out.write(reinterpret_cast<const char*>(&w2), sizeof(w2));

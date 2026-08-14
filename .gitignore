@@ -1,4 +1,5 @@
 bin/
+weights.bin
 
 logging/dataRotX.csv
 logging/dataRotY.csv
