@@ -7,7 +7,7 @@ std::array<float, 2> policy(const std::array<double, 4>& s, const std::array<std
         std::array<float, 4> mlpOut = mlpControl(s, w1, w2, w3, b1, b2, b3);
 
         float muX = mlpOut[0];
-        float muY = mlpOut[3];
+        float muY = mlpOut[2];
 
         return {muX, muY};
 }

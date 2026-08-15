@@ -28,7 +28,7 @@ int main(void){
     long double Iyy = 0.0249868814;
     
     //*****SIMULATION SETTINGS*****
-    const double dt = 0.000001;
+    const double dt = 0.0001;
     const int simTime = 15;
     const double gravity = 9.81;  
     const float rho = 1.187f;
@@ -145,7 +145,7 @@ int main(void){
                 t += dt;
                 timeSinceLastControl += dt; 
 
-                //******PID CONTROL*****z
+                //******CONTROL*****
                 if(timeSinceLastControl >= controlDt){
                     stateVector = {psi[0], psi[1], angularVelocity[0], angularVelocity[1]};
 

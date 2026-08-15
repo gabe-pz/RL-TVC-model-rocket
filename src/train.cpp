@@ -135,7 +135,7 @@ int main(void){
     double totalReturn = 0.0;
 
     //episodes and counters
-    int numEpisodes = 100000;
+    int numEpisodes = 25000;
     int numIterations = 0; 
     int episodesInWindow = 0;
     
@@ -356,15 +356,12 @@ int main(void){
             std::array<float, 64> a2 = mlpOut.a2;
             std::array<float, 4> a3 = mlpOut.a3; 
             
-            //distribution parameters
-            float muX = a3[0];
+            //sigmas calculated for mkTerms
             float sigmaX = std::exp(std::clamp(a3[1], -1.0f, 2.0f));
-            float muY = a3[2];
             float sigmaY = std::exp(std::clamp(a3[3], -1.0f, 2.0f));
 
             //gradient calculation
-            std::array<float, 4> sigmasForGrad = {sigmaX, sigmaX, sigmaY, sigmaY}; 
-            std::array<float, 4> mk = mKTerms(a3, sigmasForGrad, rawActions[i]);
+            std::array<float, 4> mk = mKTerms(a3, {sigmaX, sigmaY}, rawActions[i]);
             std::array<std::array<float, 4>, 64> partialsN = partialsSummed(y2, w2, w3); 
 
             std::array<std::array<float, 64*4>, 2> gW1 = gradientLogPoliciesW1(stateVector[i], y1, y3, mk, partialsN);

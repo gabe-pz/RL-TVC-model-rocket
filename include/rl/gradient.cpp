@@ -32,14 +32,14 @@ float sumDerivatives(int i, int k, const std::array<std::array<float, 64>, 64>& 
     return partialN;
 }
 //helper function that returns the common terms in each gradient componenet
-std::array<float, 4> mKTerms(const std::array<float, 4>& rawOutputs, const std::array<float, 4>& sigmas, const std::array<float, 2>& actions){
+std::array<float, 4> mKTerms(const std::array<float, 4>& rawOutputs, const std::array<float, 2>& sigmas, const std::array<float, 2>& actions){
     std::array<float, 4> mK;
     for(int i = 0; i < 2; i++){
         int k = i * 2;
 
         //mu gradient
         float diff = actions.at(i) - rawOutputs.at(k);
-        float var  = sigmas.at(k+1) * sigmas.at(k+1);
+        float var  = sigmas.at(i) * sigmas.at(i);
         mK.at(k)   = diff / var;
 
         //zero log(sigma) derivative term if outside bounds(since a constant), else dont
