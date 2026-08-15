@@ -31,9 +31,9 @@ This is an episodic task, where each powered flight is an episode.
 #### State Space
 A state needs to represent some data about the rockets orientation since that's what concerned about in the problem. So I decided to represent a state as a 4 tuple, consisting of the rotation of the rocket about the x and the y, as well as the angular velocity about the x and the y. Note do not care about the third degree of freedom, z, since TVC has no control over that. Each state is then given by
 $$
-{\vec s =(\theta, \phi, \omega_x, \omega_y)^T}
+{\vec s =(\psi, \phi, \omega_x, \omega_y)^T}
 $$
-Where ${\theta}$ and ${\phi}$ are the rotations about the x and y respectively and ${\omega_i}$ is the corresponding angular velocity. This mean that the state space is continuous leading to having to use non-tabular reinforcement learning methods to solve this problem.
+Where ${\psi}$ and ${\phi}$ are the rotations about the x and y respectively and ${\omega_i}$ is the corresponding angular velocity. This mean that the state space is continuous leading to having to use non-tabular reinforcement learning methods to solve this problem.
 
 #### Action Space
 The agent outputs angle commands for the two gimbal axes. The particular gimbal designed has a range of motion of ${[-5^\circ, 5^\circ]}$, per axis, defining the action space as
@@ -46,12 +46,36 @@ Thus the action space is also continuous, leading to the use of policy gradient 
 #### Reward 
 The reward model in RL is something very important, since this signal is that essentially gets the agent to accomplish the goal. Since I want the model rocket to be stable, meaning ideally have angles of zero on rotation about x and y, then the reward model must shaped around that. So the reward model I picked was,
 $$
-r_t(\theta, \phi) = 
+r_t(\psi, \phi) = 
 \begin{cases} 
--C & , |\theta| > 0.34 \lor |\phi| > 0.34 \\ 
-e^{-a(\theta^2+\phi^2)} & ,\text{otherwise} 
+-C & , |\psi| > 0.34 \lor |\phi| > 0.34 \\ 
+e^{-a(\psi^2+\phi^2)} & ,\text{otherwise} 
 \end{cases}
 $$
 Where ${C}$ and ${a}$ are hyperparameters, and if agent gets reward of ${C}$ the episode is terminated. 
 
 ## Policy
+As previously stated, the policy gradient method used was *REINFORCE*. The policy is therefore stochastic and is parameterized by, ${\vec\theta}$ giving the policy ${\pi(a_x,a_y|s,\vec\theta)}$. The **goal** of policy gradient methods is to find the parameters of this policy that maximize the expected return. REINFORCE accomplishes this using a Monte Carlo estimate of the policy gradient. In particular, the parameters are updated after an episode has been completed, using the return observed from the sampled trajectory. This means that the complete trajectory must be collected before an update can be performed. The pseudocode for the REINFORCE algorithm given by Sutton and Barto, which was used as the basis for the implementation in this work, is shown below.![enter image description here](https://cdn.phototourl.com/free/2026-08-15-1c0780be-3111-4082-9854-a9df1689025a.png)
+
+### Distribution
+
+Since the action space is continuous, the policy must be defined using a probability distribution that can represent continuous actions. For this problem, I chose the univariate normal distribution, also known as the Gaussian distribution, to model each action component. Assuming that each action component is independent, then we can write the policy as such
+$$
+{\pi(a_x,a_y|s,\vec\theta) = \pi(a_x|s,\vec\theta)\pi(a_y|s,\vec\theta)=\mathcal{N}(\mu_x, \sigma_x^2)\mathcal{N}(\mu_y, \sigma_y^2)}
+$$
+### PDF Parameters
+The goal here is to then find the parameters of each probability distribution, ${\mu_i}$ & ${\sigma_i}$, such that obtain an optimal policy. This was done using a feed-forward neural network whose parameters were given by ${\vec\theta}$. That is letting the outputs of the network be ${\vec\kappa}$ then 
+$$
+{\vec\kappa = f[\vec s,\vec\theta]=(\mu_x, \log(\sigma_x), \mu_y, \log(\sigma_y)})^T
+$$
+Where use logarithms because the sigma must be positive, so have the network output the log of sigma, then exponentiation the output to ensure it is positive. 
+
+### Action selection 
+During training to select an action it is done simply by sampling an action from its corresponding distribution(x or y), then due to the constraints of the gimbal those "raw actions" are passed into hyperbolic tangent and multiplied by the max output angle to ensure actions are within physical limits.
+
+After training then want to select the action with the highest probability each time, which for the Gaussian, just means selecting ${\mu}$ as the raw action and follow same action "squashing" process.
+
+ 
+
+ 
+TBC....
