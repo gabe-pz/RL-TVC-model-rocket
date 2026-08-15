@@ -6,6 +6,11 @@ void saveParameters(const std::array<std::array<float, 4>, 64>& w1, const std::a
    
     std::ofstream out("weights.bin", std::ios::binary);
     
+    if (!out.is_open()) {
+        std::cerr << "Error: Could not open weights.bin for saving.\n";
+        return;
+    }
+    
     out.write(reinterpret_cast<const char*>(&w1), sizeof(w1));
     out.write(reinterpret_cast<const char*>(&w2), sizeof(w2));
     out.write(reinterpret_cast<const char*>(&w3), sizeof(w3));
@@ -19,14 +24,20 @@ void saveParameters(const std::array<std::array<float, 4>, 64>& w1, const std::a
 void loadParameters(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 64>, 4>& w3, 
     std::array<float, 64>& b1, std::array<float, 64>& b2, std::array<float, 4>& b3){
 
-        std::ifstream in("../weights.bin", std::ios::binary);
-        
-        in.read(reinterpret_cast<char*>(&w1), sizeof(w1));
-        in.read(reinterpret_cast<char*>(&w2), sizeof(w2));
-        in.read(reinterpret_cast<char*>(&w3), sizeof(w3));
-        in.read(reinterpret_cast<char*>(&b1), sizeof(b1));
-        in.read(reinterpret_cast<char*>(&b2), sizeof(b2));
-        in.read(reinterpret_cast<char*>(&b3), sizeof(b3));
-        
-        in.close();
+  
+    std::ifstream in("weights.bin", std::ios::binary);
+    
+    if (!in.is_open()) {
+        std::cerr << "Error: Could not open weights.bin for loading.\n";
+        return;
+    }
+    
+    in.read(reinterpret_cast<char*>(&w1), sizeof(w1));
+    in.read(reinterpret_cast<char*>(&w2), sizeof(w2));
+    in.read(reinterpret_cast<char*>(&w3), sizeof(w3));
+    in.read(reinterpret_cast<char*>(&b1), sizeof(b1));
+    in.read(reinterpret_cast<char*>(&b2), sizeof(b2));
+    in.read(reinterpret_cast<char*>(&b3), sizeof(b3));
+    
+    in.close();
 }

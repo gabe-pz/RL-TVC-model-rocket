@@ -100,7 +100,7 @@ int main(void){
     //mlp
     MLPoutput mlpOut;
     
-    //network outputs
+    //network outputs, i.e distribution parameters
     std::array<float, 4> mlpControlOut; 
     
     //weights and biases initialization
@@ -118,36 +118,36 @@ int main(void){
     float actionX = 0.0f;
     float actionY = 0.0f;
 
-    //storing the raw outputs for mkTerms
-    std::vector<std::array<float, 2>> rawActions;
-
-    //return and reward
-    double returnT = 0.0;
-    std::vector<double> reward;
-    double accumlatedReward = 0.0;
-
-    //logging
-    double accumlatedReturn = 0.0;
-    double accumlatedFlightTime = 0.0;
-    double totalReturn = 0.0;
-    int episodesInWindow = 0;
-
-    //episodes and counter
-    int numEpisodes = 1000000;
-    int numIterations = 0; 
+    //raw action output of the network 
+    std::vector<std::array<float, 2>> rawActions;    
     
-    //hyperparameters
-    float alpha = 0.0001f;
-    float gamma = 0.75f;
-    float a = 20.0f;
-    float b = 2.0f;
-
     //control 
     double controlDt = 0.05;
     double timeSinceLastControl = controlDt;
 
+    //return and reward
+    std::vector<double> reward;
+    double returnT = 0.0; 
+
+    //logging vars
+    double returnAccumlated = 0.0;
+    double accumlatedFlightTime = 0.0;
+    double totalReturn = 0.0;
+
+    //episodes and counters
+    int numEpisodes = 100000;
+    int numIterations = 0; 
+    int episodesInWindow = 0;
+    
+    //hyperparameters
+    float alpha = 0.0001f;//step size
+    float gamma = 0.82f;//discount factor 
+    float a = 125.0f;//exp constant
+    float b = 1.0f;//angular v penalize factor
 
     for(int e = 0; e < numEpisodes; e++){      
+        //*****ENV*****
+
         //new random wind per episode
         unsigned int episodeSeed = rd();
         int n = (int)(simTime * GEN_FREQ) + 2;
@@ -156,11 +156,14 @@ int main(void){
         std::vector<double> pinkW = generatePinkNoise(n, episodeSeed + 2);
 
 
-        //RESET
+        //*****RESET*****
+
+        //time
         numIterations = 0;
         t = 0.0;
         timeSinceLastControl = controlDt;
 
+        //state vars
         stateQ = {1.0, 0.0, 0.0, 0.0};
         stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
         angularVelocity = {0.0, 0.0, 0.0};
@@ -168,16 +171,17 @@ int main(void){
         position = {0.0, 0.0, 0.0};
         psi = {0.0, 0.0};
 
+        //rl
         returnT = 0.0; 
-        accumlatedReward = 0.0;
 
+        //storage
         rawActions.clear(); 
         reward.clear(); 
         stateVector.clear();
 
         //generate episode
         for(int i = 0; i < (int)(simTime/dt); i++){
-            //time and iterations
+            //time
             t += dt;
             timeSinceLastControl += dt;
             
@@ -185,18 +189,20 @@ int main(void){
             if(timeSinceLastControl >= controlDt){
                 timeSinceLastControl = 0.0; 
                 
+                //ensure have ran inital action before getting inital reward
                 if(numIterations > 0){
 
-                    if(std::abs(psi[0]) > 0.34 || std::abs(psi[1]) > 0.34){
+                    //episode termination check
+                    if(std::abs(psi[0]) > 0.34 || std::abs(psi[1]) > 0.34 || (position[2] < 0 && t > 0.5)){
+                        
+                        //negative reward for termination
                         reward.push_back(-10.0);       
-                        accumlatedReward += -10;     
                         break;
                     }
                 
                     //reward update
-                    double rewardT = std::exp(-a*(psi[0]*psi[0])) + std::exp(-a*(psi[1]*psi[1]));
-                    reward.push_back(rewardT);    
-                    accumlatedReward += rewardT;     
+                    double rewardT = std::exp(-a*(psi[0]*psi[0]+psi[1]*psi[1]));
+                    reward.push_back(rewardT);       
                 }
 
                 //increment another step
@@ -211,26 +217,31 @@ int main(void){
 
                 //distribution parameters
                 float muX = mlpControlOut[0];
-                float sigmaX = std::exp(std::clamp(mlpControlOut[1], -2.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
+                float sigmaX = std::exp(std::clamp(mlpControlOut[1], -1.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
                 float muY = mlpControlOut[2];
-                float sigmaY = std::exp(std::clamp(mlpControlOut[3], -2.0f, 2.0f));
+                float sigmaY = std::exp(std::clamp(mlpControlOut[3], -1.0f, 2.0f));
 
-                //action sampling 
+                //distribution creation
                 std::normal_distribution<float> dX{muX, sigmaX};
                 std::normal_distribution<float> dY{muY, sigmaY}; 
                 
+                //action sampling
                 rawActionX = dX(gen);
                 rawActionY = dY(gen); 
                 
-                //clamp actions to domain of [-5 deg, 5 deg]
-                actionX = 0.1*std::tanh(rawActionX);
-                actionY = 0.1*std::tanh(rawActionY);
+                //clamp actions to domain of [-5 deg, 5 deg], where 0.087 rads is about 5 degs. 
+                actionX = 0.087*std::tanh(rawActionX);
+                actionY = 0.087*std::tanh(rawActionY);
 
                 //log raw actions sampled from distribution
                 rawActions.push_back({rawActionX, rawActionY});
             }
 
-            //*****WIND*****
+
+            //*****PHYSICS SIMULATION*****
+
+            
+            //*****WIND GEN*****
             //sampling three independent turbulence streams at time t
             double u = windVelocity(t, U,   sigmaU,       pinkU);   
             double v = windVelocity(t, 0.0, 0.8 * sigmaU, pinkV);   
@@ -248,7 +259,7 @@ int main(void){
             //magnitude of relative v in RF
             double relativeVelMag = std::sqrt((relativeVelocityRf[0]*relativeVelocityRf[0]) + (relativeVelocityRf[1]*relativeVelocityRf[1]) + (relativeVelocityRf[2]*relativeVelocityRf[2]));
             
-            //*****COMPUTE FORCES*****
+            //*****FORCES*****
             //force due to thrust
             thrustRf = forceThrustRf(actionX, actionY, t);
             thrustWf = rotateRfToWf(stateQ, thrustRf); 
@@ -263,7 +274,7 @@ int main(void){
             sumOfForcesWf = {thrustWf[0]+aerodynamicForceswf[0], thrustWf[1]+aerodynamicForceswf[1], thrustWf[2]-mass(t)*gravity+aerodynamicForceswf[2]}; 
             
 
-            //****GET POSITION THROUGH ITS DERIVATIVES VIA EULER INTEGRATION*****
+            //****POSITION AND SUCH*****
             //compute accleration
             accleration[0] = (sumOfForcesWf[0] / mass(t));
             accleration[1] = (sumOfForcesWf[1] / mass(t));
@@ -280,12 +291,12 @@ int main(void){
             position[2] += dt*velocity[2]; 
 
 
-            //*****COMPUTE TORQUES*****
+            //*****TORQUES*****
             torqueThrust = crossProduct(r, thrustRf);
             torqueAero = crossProduct(rAero, aerodynamicForcesRf);
 
 
-            //****GET ROATION THROUGH ITS DERIVATIVES VIA EULER INTEGRATION*****
+            //****ROTATION AND SUCH*****
             //compute angular accleration
             angularAccleration[0] = ((torqueThrust[0] + torqueAero[0]) / Ixx);
             angularAccleration[1] = ((torqueThrust[1] + torqueAero[1]) / Iyy);
@@ -317,9 +328,6 @@ int main(void){
             psi = quaternionToEuler(stateQ); 
         }
         
-        //log the averageReward from that episode
-        double averageReward = accumlatedReward / numIterations;
-
         //REINFORCE
         for(int i = 0; i < numIterations; i++){
         
@@ -327,17 +335,19 @@ int main(void){
             returnT = 0.0;
             for(int k = i; k < (int)reward.size(); k++){
                 returnT += std::pow(gamma, k-i) * reward[k];
-                //log total return for current Episode
+                
+                //log total return from start of ep, for current ep
                 if(i == 0 && k == (int)reward.size()-1){
                     totalReturn = returnT;
-                }  
+                }
+
             }
 
 
             //forward pass
             mlpOut = mlp(stateVector[i], w1, w2, w3, b1, b2, b3); 
             
-            //log pre-activations and activations 
+            //pre-activations and activations, comptued for the new weights from the upated theta
             std::array<float, 64> y1 = mlpOut.y1;
             std::array<float, 64> y2 = mlpOut.y2;
             std::array<float, 4> y3 = mlpOut.y3;
@@ -346,57 +356,61 @@ int main(void){
             std::array<float, 64> a2 = mlpOut.a2;
             std::array<float, 4> a3 = mlpOut.a3; 
             
-            //outputs
+            //distribution parameters
             float muX = a3[0];
-            float sigmaX = std::exp(std::clamp(a3[1], -2.0f, 2.0f));
+            float sigmaX = std::exp(std::clamp(a3[1], -1.0f, 2.0f));
             float muY = a3[2];
-            float sigmaY = std::exp(std::clamp(a3[3], -2.0f, 2.0f));
+            float sigmaY = std::exp(std::clamp(a3[3], -1.0f, 2.0f));
 
             //gradient calculation
-            std::array<float, 4> mk = mKTerms({muX, sigmaX, muY, sigmaY}, rawActions[i]);
+            std::array<float, 4> sigmasForGrad = {sigmaX, sigmaX, sigmaY, sigmaY}; 
+            std::array<float, 4> mk = mKTerms(a3, sigmasForGrad, rawActions[i]);
             std::array<std::array<float, 4>, 64> partialsN = partialsSummed(y2, w2, w3); 
 
             std::array<std::array<float, 64*4>, 2> gW1 = gradientLogPoliciesW1(stateVector[i], y1, y3, mk, partialsN);
             std::array<std::array<float, 64>, 2> gB1 = gradientLogPoliciesB1(y1, a3, mk, partialsN);
             std::array<std::array<float, 64*64>, 2> gW2 = gradientLogPoliciesW2(w3, a1, y2, y3, mk);
             std::array<std::array<float, 64>, 2> gB2 = gradientLogPoliciesB2(w3, y2, y3, mk);
-
             std::array<std::array<float, 4*64>, 2> gW3 = gradientLogPoliciesW3(y3, a2, mk);
             std::array<std::array<float, 4>, 2> gB3 = gradientLogPoliciesB3(y3, mk);
 
+            //construct the gradient
             std::array<std::array<float, 4740>, 2> constructGrads = constructGradients(gW1, gB1, gW2, gB2, gW3, gB3);
-
             std::array<float, 4740> gradX = constructGrads[0];
             std::array<float, 4740> gradY = constructGrads[1];
-
-            std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, (returnT-averageReward));
+            
+            //calculate the gradient term in REINFORCE
+            std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, returnT);
             
             //update parameters with gradient term
             std::array<float, 4740> parameters = flattenParameters(w1, b1, w2, b2, w3, b3);
 
             REINFORCEupdate(parameters, gradTerm);
-            
                     
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
 
-        accumlatedReturn += totalReturn;
+        //for logging purposes
+        returnAccumlated += totalReturn;
         accumlatedFlightTime += numIterations*controlDt;
         episodesInWindow ++; 
 
-        //simple logging
-        if((e % 10000 == 0 && e > 0) || e == numEpisodes - 1){
+        //Log to terminal every 1k eps some data 
+        if((e % 1000 == 0 && e > 0) || e == numEpisodes - 1){
             std::cout << "*************************************************************" << std::endl;
             std::cout << "DATA AFTER " << e << " EPISODES: " << std::endl; 
-            std::cout << "AVERAGE RETURN = " << (accumlatedReturn / episodesInWindow) << std::endl;
+            std::cout << "AVERAGE RETURN = " << (returnAccumlated / episodesInWindow) << std::endl;
             std::cout << "AVERAGE FLIGHT TIME = " << (accumlatedFlightTime / episodesInWindow) << "s" << std::endl;
 
-            accumlatedReturn = 0.0;
+            returnAccumlated = 0.0;
             accumlatedFlightTime = 0.0;
             episodesInWindow = 0.0;
         }
     }
 
+    //save learned parameters to .bin
     saveParameters(w1, w2, w3, b1, b2, b3);
+    
+    std::cout << w1[1][1] << std::endl;
     return 0;
 }

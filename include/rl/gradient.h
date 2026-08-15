@@ -14,7 +14,7 @@ float derivativePreactivationWrtWeight(const std::array<T, in>& vecIn, int j);
 
 //*****HELPER FUNCTIONS FOR DERIVATIVES*****
 float sumDerivatives(int i, int k, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& y2);
-std::array<float, 4> mKTerms(const std::array<float, 4>& outputs,  const std::array<float, 2>& actions);
+std::array<float, 4> mKTerms(const std::array<float, 4>& rawOutputs, const std::array<float, 4>& sigmas, const std::array<float, 2>& actions);
 std::array<std::array<float, 4>, 64> partialsSummed(const std::array<float, 64>& y2, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3);
 
 //*****PARTICULAR DERIVATIVES*****
