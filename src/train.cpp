@@ -143,7 +143,7 @@ int main(void){
     float alpha = 0.0001f;//step size
     float gamma = 0.82f;//discount factor 
     float a = 125.0f;//exp constant
-    float b = 1.0f;//angular v penalize factor
+    // float b = 1.0f;//angular v penalize factor
 
     for(int e = 0; e < numEpisodes; e++){      
         //*****ENV*****
@@ -193,7 +193,7 @@ int main(void){
                 if(numIterations > 0){
 
                     //episode termination check
-                    if(std::abs(psi[0]) > 0.34 || std::abs(psi[1]) > 0.34 || (position[2] < 0 && t > 0.5)){
+                    if(std::abs(psi[0]) > 0.34 || std::abs(psi[1]) > 0.34){
                         
                         //negative reward for termination
                         reward.push_back(-10.0);       
