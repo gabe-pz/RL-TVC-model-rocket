@@ -90,9 +90,7 @@ As previously stated, the policy gradient method used here is *REINFORCE*. The p
 
   
 
-#### Probability Distribution
-
-  
+#### Stochastic Policy Formulation
 
 Since the action space is continuous, the policy must be defined using a probability distribution that can represent continuous actions. For this problem, I chose the univariate normal distribution, aka the Gaussian distribution, to model each action component. Assuming that each action component is independent, then can write the policy as such
 
@@ -100,7 +98,6 @@ $$
 {\pi(a_x,a_y|s,\vec\theta) = \pi(a_x|s,\vec\theta)\pi(a_y|s,\vec\theta)=\mathcal{N}(\mu_x, \sigma_x^2)\mathcal{N}(\mu_y, \sigma_y^2)}
 $$
 
-#### Probability Distribution Parameters Parameters
 
 The goal here is to then find the parameters of each probability distribution, ${\mu_i}$ & ${\sigma_i}$, such that obtain an optimal policy. This was done using a feed-forward neural network whose parameters were given by ${\vec\theta}$. That is letting the outputs of the network be ${\vec\kappa}$ then
 
@@ -167,8 +164,3 @@ The results of the flight after 25,000 episodes of training and a burn time of $
 ### Rotation about the y-axis for the flight
 
 ![enter image description here](https://cdn.phototourl.com/free/2026-08-16-082a4c8f-020c-4f9e-bcef-4f6aaa4c2f49.png)
-
-## Disclaimer
-I am by no means a programmer, I study physics at univeristy and read machine learning text in my spare time. I simply implement the ideas I find cool when I have time to.
-
-I am aware this project is highly unoptimized, a bit redundant, and lacks readable, thus I would appericate any tips or tricks programers have. Though, I still do plan to try and fix these issues on my own as I learn more about programming, since I started to study that in my spare time as well. 
