@@ -13,8 +13,6 @@ void physicsUpdate(const double dt, double t, double U, double sigmaU, float act
     constexpr double gravity = 9.81;  
     constexpr float rho = 1.187f;
     constexpr double angleWindHeading = 0.0; 
-    constexpr double centerOfGravity = 0.405;
-    constexpr double distanceToThrustVector = 0.6477;
     constexpr double Ixx = 0.02498995;
     constexpr double Iyy = 0.02498688;
 

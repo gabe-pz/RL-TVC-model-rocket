@@ -80,7 +80,10 @@ int main(void){
     float gamma = 0.8f;//discount factor 
     float a = 175.0f;//exp constant
     float b = 5.5f;//angular v penalize factor
+    float lowerBoundExp = -1.0f;//the lower bound for clamp of exponential for computing sigma 
+    float upperBoundExp = 2.0f;//the upper bound  for clamp of exponential for computing sigma 
     int c = -10;//termination reward
+
 
     for(int e = 0; e < numEpisodes; e++){      
         //******WIND AND SERVO OFFSET*****
@@ -168,17 +171,17 @@ int main(void){
 
                 //gaussian distribution parameters
                 float muX = mlpOutputControl[0];
-                float sigmaX = std::exp(std::clamp(mlpOutputControl[1], -1.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
+                float sigmaX = std::exp(std::clamp(mlpOutputControl[1], lowerBoundExp, upperBoundExp));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
                 float muY = mlpOutputControl[2];
-                float sigmaY = std::exp(std::clamp(mlpOutputControl[3], -1.0f, 2.0f));//also clamping to halt explosions. values were empirically found
+                float sigmaY = std::exp(std::clamp(mlpOutputControl[3], lowerBoundExp, upperBoundExp));//also clamping to halt explosions. values using were empirically found
 
                 //gaussian distribution creation
-                std::normal_distribution<float> dX{muX, sigmaX};
-                std::normal_distribution<float> dY{muY, sigmaY}; 
+                std::normal_distribution<float> gaussianDx{muX, sigmaX};
+                std::normal_distribution<float> gaussianDy{muY, sigmaY}; 
                 
                 //action sampling
-                rawActionX = dX(gen);
-                rawActionY = dY(gen); 
+                rawActionX = gaussianDx(gen);
+                rawActionY = gaussianDy(gen); 
                 
                 //clamp actions to domain of [-5 deg, 5 deg], where 0.087 rads is about 5 degs. 
                 actionX = 0.087*std::tanh(rawActionX);
@@ -218,11 +221,11 @@ int main(void){
 
             std::array<float, 64> a1 = mlpOutputTraining.a1;
             std::array<float, 64> a2 = mlpOutputTraining.a2;
-            std::array<float, 4> a3 = mlpOutputTraining.a3;//(mu_x, log(sigma_x), mu_y, log(sigma_y))
+            std::array<float, 4> a3 = mlpOutputTraining.a3;//(mu_x, log(sigma_x), mu_y, log(sigma_y))^T
             
             //sigmas calculated for mkTerms
-            float sigmaX = std::exp(std::clamp(a3[1], -1.0f, 2.0f));//same clamping and trick as in physics loop, aka episode generation
-            float sigmaY = std::exp(std::clamp(a3[3], -1.0f, 2.0f));
+            float sigmaX = std::exp(std::clamp(a3[1], lowerBoundExp, upperBoundExp));//same clamping and trick as in physics loop, aka episode generation
+            float sigmaY = std::exp(std::clamp(a3[3], lowerBoundExp, upperBoundExp));
 
             //gradient calculation
             std::array<float, 4> mk = mKTerms(a3, {sigmaX, sigmaY}, rawActions[i]);
@@ -243,11 +246,13 @@ int main(void){
             //calculate the gradient term in REINFORCE
             std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, returnT);
             
-            //update parameters with gradient term
+            //flatten weights and biases into single vector, theta
             std::array<float, 4740> parameters = flattenParameters(w1, b1, w2, b2, w3, b3);
-
+            
+            //apply the reinforce update
             REINFORCEupdate(parameters, gradTerm);
-                    
+            
+            //update each weight and bias with the reinforce update
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
 
