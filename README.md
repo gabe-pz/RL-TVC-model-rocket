@@ -74,7 +74,7 @@ $$
 r_t(\psi, \phi) =
 \begin{cases}
 -c & , |\psi| > 0.34  \lor |\phi| > 0.34 \\
-e^{-a(\psi^2+\phi^2)} - b(\psi^2+\phi^2) & ,\text{otherwise}
+e^{-a(\psi^2+\phi^2)} - b(\dot{\psi}^2+\dot{\phi}^2) & ,\text{otherwise}
 \end{cases}
 $$
 
@@ -167,3 +167,7 @@ The results of the flight after 25,000 episodes of training and a burn time of $
 
 ![enter image description here](https://cdn.phototourl.com/free/2026-08-16-082a4c8f-020c-4f9e-bcef-4f6aaa4c2f49.png)
 
+## Disclaimer
+I am by no means a programmer, I study physics at univeristy and read machine learning text in my spare time. I simply implement the ideas I find cool when I have time to.
+
+I am aware this project is highly unoptimized, a bit redundant, and lacks readable. And I would appericate any tips or tricks programers have. Though I still do plan to try and fix these issues on my own as I learn more about programming, since I started to study that in my spare time as well. 
