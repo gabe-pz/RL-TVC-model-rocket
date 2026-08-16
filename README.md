@@ -123,16 +123,47 @@ After training then want to select the action with the highest probability each 
 
 ## The Network
 As stated before the neural network architecture I used was a feed-forward multilayer perceptron (MLP). It took the state vector ${\vec s}$ and outputted parameters for each independent policy, ${\pi_x}$ and ${\pi_y}$, as such,
+
 $$
 {\vec\kappa = f[\vec s, \vec\theta]=(\mu_x, \log(\sigma_x), \mu_y, \log(\sigma_y)})^T
 $$
+
 The MLP I used consists of 2 hidden layers, each with 64 hidden units. 
 
 The activation function I used was the rectified linear unit, or ReLU for short. I only applied it to the 2 hidden layers and not the output layer because ReLU is defined as
+
 $$
 {\text{ReLU}(z) =\begin{cases}
 0 & ,z <0 \\
 z & , z\geq 0
 \end{cases} }
 $$
+
 meaning its range is ${(0,+\infty)}$. But for the Gaussian, ${\mu}$ is defined on ${(-\infty, \infty)}$, so in the laziest way to account for that, I simply removed the activation on the output layer and kept it linear.
+
+## Training 
+All that was used to train the network was vanilla stochastic gradient ascent with gradient clipping. After about 25,000 episodes the policy was able to converge and the flight was pretty stable. The hyper parameters used are 
+given here
+
+```cpp
+float alpha = 0.0001f;//step size
+float gamma = 0.925f;//discount factor 
+float a = 150.0f;//exp constant
+float b = 5.0f;//angular v penalize factor
+float maxStep = 0.005;//max gradient term can be
+```
+
+These are still being tuned to achieve better flights, but for now as is they were able to achieve the success criterion 
+
+## Results
+The results of the flight after 25,000 episodes of training and a burn time of ${t=3.45s}$ are given below in the plots
+
+
+### Rotation about the x-axis for the flight
+
+![enter image description here](https://cdn.phototourl.com/free/2026-08-16-26ddbe8c-0cca-4cdd-b7fa-9ab53b83c8b5.png)
+
+### Rotation about the y-axis for the flight
+
+![enter image description here](https://cdn.phototourl.com/free/2026-08-16-082a4c8f-020c-4f9e-bcef-4f6aaa4c2f49.png)
+
