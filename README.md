@@ -139,28 +139,30 @@ $$
 meaning its range is ${(0,+\infty)}$. But for the Gaussian, ${\mu}$ is defined on ${(-\infty, \infty)}$, so in the laziest way to account for that, I simply removed the activation on the output layer and kept it linear.
 
 ## Training 
-All that was used to train the network was vanilla stochastic gradient ascent with gradient clipping. After about 25,000 episodes the policy was able to converge and the flight was pretty stable. The hyper parameters used are 
+All that was used to train the network was vanilla stochastic gradient ascent with gradient clipping. After 50,000 episodes the policy was able to converge to achieve the success criterion. The hyperparameters used are 
 given here
 
 ```cpp
 //hyperparameters
 float alpha = 0.00005f;//step size
-float gamma = 0.9f;//discount factor 
+float gamma = 0.8f;//discount factor 
 float a = 175.0f;//exp constant
 float b = 5.5f;//angular v penalize factor
-int c = -10.0f;//termination reward
+int c = -10;//termination reward
+
+float maxStep = 1.0;//max step for grad clipping
 ```
 
-These are still being tuned to achieve better flights, but for now as is they were able to achieve the success criterion 
+Note: These are still being tuned to achieve better flight, so might change in repo later on
 
 ## Results
-The results of the flight after 25,000 episodes of training and a burn time of ${t=3.45s}$ are given below in the plots
+The results of the flight after 50,000 episodes of training and a burn time of ${t=3.45s}$ are given below in the plots showing successfully achievement of the criterion,
 
 
 ### Rotation about the x-axis for the flight
 
-![enter image description here](https://cdn.phototourl.com/free/2026-08-16-26ddbe8c-0cca-4cdd-b7fa-9ab53b83c8b5.png)
+![enter image description here](https://cdn.phototourl.com/free/2026-08-16-e361be0d-fb84-4f8f-a164-b8a86d978b9a.png)
 
 ### Rotation about the y-axis for the flight
 
-![enter image description here](https://cdn.phototourl.com/free/2026-08-16-082a4c8f-020c-4f9e-bcef-4f6aaa4c2f49.png)
+![enter image description here](https://cdn.phototourl.com/free/2026-08-16-f388cba3-3495-4664-bae7-88d1d20de1c1.png)

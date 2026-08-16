@@ -69,15 +69,16 @@ std::array<std::array<float, 4>, 64> partialsSummed(const std::array<float, 64>&
 
 //The product of the three derivatives in the expression for the derivatives of z_k wrt weights and biases in 1st layer
 float derivativeZkWrtW_1ij(const std::array<double, 4>& stateVec, const std::array<float, 64>& y1, const std::array<float, 4>& yOut, int i, int j, int k){
-    float p1 = 1.0f;
-    float p2 = derivativeActivationWrtPreactivation(y1.at(i));
-    float p3 = derivativePreactivationWrtWeight(stateVec, j);
-    return p1*p2*p3;
+    float partial1 = 1.0f;
+    float partial2 = derivativeActivationWrtPreactivation(y1.at(i));
+    float partial3 = derivativePreactivationWrtWeight(stateVec, j);
+    return partial1*partial2*partial3;
 }
 float derivativeZkWrtB_1ij(std::array<float, 64> y1, std::array<float, 4> yOut, int i, int k){
-    float p1 = 1.0f;
-    float p2 = derivativeActivationWrtPreactivation(y1.at(i));
-    return p1*p2*1.0f;
+    float partial1 = 1.0f;
+    float partial2 = derivativeActivationWrtPreactivation(y1.at(i));
+    float partial3 = 1.0f;
+    return partial1*partial2*partial3;
 }
 
 //expressions for derivative of z_k wrt weights and biases in 2nd layer
@@ -99,6 +100,7 @@ float derivativeZkWrtB_2ij(const std::array<float, 64>& y2, const std::array<flo
 //expressions for derivative of z_k wrt weights and biases in 3rd layer
 float derivativeZkWrtW_3ij(const std::array<float, 4>& yOut, const std::array<float, 64>& a2, int i, int j, int k){
 
+    //kronecker delta
     if(i == k){
         float p1 = 1.0f;
         float p2 = derivativePreactivationWrtWeight(a2, j);
@@ -109,9 +111,9 @@ float derivativeZkWrtW_3ij(const std::array<float, 4>& yOut, const std::array<fl
 }
 float derivativeZkWrtB_3ij(const std::array<float, 4>& yOut, int i, int k){
 
+    //kronecker delta
     if(i == k){
-        float p1 = 1.0f;
-        return p1*1.0f;
+        return 1.0f;
     } 
     else return 0.0f;
 }

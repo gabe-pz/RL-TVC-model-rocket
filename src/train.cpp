@@ -5,101 +5,41 @@
 #include <cmath> 
 #include <algorithm> 
 
-#include "../include/physics/windGeneration.h" 
-#include "../include/math/rocketMath.h"
-#include "../include/physics/rocketProperties.h"
-
-
 #include "../include/rl/mlp.h"
 #include "../include/rl/gradient.h"
 #include "../include/rl/REINFORCE.h"
 #include "../include/io/saveAndLoad.h"
-
+#include "../include/physics/physicsLoop.h"
 
 int main(void){
-    //*****ROCKET PROPERTIES*****
-    //aerodynamic constants
-    const double centerOfPressure = 0.0877;
-    const double aRef = 0.00456; 
-    const double cD = 0.291;
-    const int cNa = 2;
-
-    //cg and moment arm
-    const double centerOfGravity = 0.405;
-    const double distanceToThrustVector = 0.6477;
-
-    //moment of inertia
-    long double Ixx = 0.0249899588;
-    long double Iyy = 0.0249868814;
-    
-    //*****SIMULATION SETTINGS*****
-    const double dt = 0.0001;
-    const double simTime = tBurn;
-    const double gravity = 9.81;  
-    const float rho = 1.187f;
-    double t = 0.0;
-
-    //random number
+    //*****RANDOM NUM GEN*****
     std::random_device rd;
     std::mt19937 gen(rd());
-    
-    //*****SERVOS*****
 
-    //servos slew
-    
-    //*****WIND SETTINGS*****
-
-    //mean-wind heading in world frame
-    double theta = 0.0;
-    double ux = std::cos(theta);
-    double uy = std::sin(theta);
-    
-    //*******STD ARRAY INITALIZATIONS*****
+    //*****SIMULATION VARS*****
+    const double dt = 0.0001;
+    const double simTime = tBurn;
+    double t = 0.0;
+        
+    //*******STATE ARRAY INITALIZATIONS*****
     //quaterion initaliztion
-    std::array<double, 4> stateQ = {1.0, 0.0, 0.0, 0.0};
-    std::array<double, 4> stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
-    std::array<double, 4> angularVelocityQ = {1.0, 0.0, 0.0, 0.0};
-
-    //forces initalization
-    std::array<double, 3> thrustRf = {0.0, 0.0, 0.0};
-    std::array<double, 3> thrustWf = {0.0, 0.0, 0.0};
-    std::array<double, 3> aerodynamicForcesRf = {0.0, 0.0, 0.0}; 
-    std::array<double, 3> aerodynamicForceswf = {0.0, 0.0, 0.0}; 
-    std::array<double, 3> sumOfForcesWf = {0.0, 0.0, 0.0}; 
-
-    //torques initalization
-    std::array<double, 3> torqueThrust = {0.0, 0.0, 0.0}; 
-    std::array<double, 3> torqueAero = {0.0, 0.0, 0.0}; 
+    std::array<double, 4> stateQ;
     
-    //position and its derivatives initalization
-    std::array<double, 3> accleration = {0.0, 0.0, 0.0};
-    std::array<double, 3> velocity = {0.0, 0.0, 0.0};
-    std::array<double, 3> position = {0.0, 0.0, 0.0}; 
-    std::array<double, 3> relativeVelocityWf = {0.0, 0.0, 0.0};
-    std::array<double, 3> relativeVelocityRf = {0.0, 0.0, 0.0};
+    std::array<double, 3> velocity;
+    std::array<double, 3> position;
 
-    //rotation and its derivatives initalization. Note psi = (phi, theta)
-    std::array<double, 3> angularAccleration = {0.0, 0.0, 0.0};
-    std::array<double, 3> angularVelocity = {0.0, 0.0, 0.0};
-    std::array<double, 2> psi = {0.0, 0.0};
-    
-    //moment arms
-    std::array<double, 3> r = {0.0, 0.0, centerOfGravity-distanceToThrustVector};
-    std::array<double, 3> rAero = {0.0, 0.0, centerOfGravity-centerOfPressure};
+    std::array<double, 3> angularVelocity;
+    std::array<double, 2> psi;
 
-    //wind velocity initalization
-    std::array<double, 3> windVelocityWf = {0.0, 0.0, 0.0};
-
-
-    //*****RL*****
+    //*****REINFORCEMENT LEARNING*****
     //state vector
     std::vector<std::array<double, 4>> stateVector;
     
-    //mlp
-    MLPoutput mlpOut;
-    
-    //network outputs, i.e distribution parameters
-    std::array<float, 4> mlpControlOut; 
+    //mlp outputs for training
+    MLPoutput mlpOutputTraining;
+
+    //mlp outputs for control
+    std::array<float, 4> mlpOutputControl; 
     
     //weights and biases initialization
     std::array<std::array<float, 4>, 64> w1; 
@@ -111,13 +51,11 @@ int main(void){
     initWeightsAndBiases(w1, w2, w3, b1, b2, b3);
         
     //actions
+    std::vector<std::array<float, 2>> rawActions;    
     float rawActionX = 0.0f;
     float rawActionY = 0.0f;
     float actionX = 0.0f;
     float actionY = 0.0f;
-
-    //raw action output of the network 
-    std::vector<std::array<float, 2>> rawActions;    
     
     //control 
     double controlDt = 0.05;
@@ -133,60 +71,61 @@ int main(void){
     double totalReturn = 0.0;
 
     //episodes and counters
-    int numEpisodes = 25000;
+    int numEpisodes = 50000;
     int numIterations = 0; 
     int episodesInWindow = 0;
     
     //hyperparameters
     float alpha = 0.00005f;//step size
-    float gamma = 0.9f;//discount factor 
+    float gamma = 0.8f;//discount factor 
     float a = 175.0f;//exp constant
     float b = 5.5f;//angular v penalize factor
     int c = -10;//termination reward
 
     for(int e = 0; e < numEpisodes; e++){      
-        //******NEW WIND*****
-
-        //new wind generation constants per episode
-        std::uniform_real_distribution<double> distU(2.0, 10.0); //random average wind speed
+        //******WIND AND SERVO OFFSET*****
+        
+        //wind generation constants per episode
+        std::uniform_real_distribution<double> distU(2.0, 8.0); //random average wind speed
         double U = distU(gen);
-
+        
         std::uniform_real_distribution<double> distIntensity(0.10, 0.20); //random turb intensity
         double intensity = distIntensity(gen); 
         
         double sigmaU = intensity * U;
 
-        //new random wind per episode
+        //random wind generated per episode
         unsigned int episodeSeed = rd();
         int n = (int)(simTime * GEN_FREQ) + 2;
         std::vector<double> pinkU = generatePinkNoise(n, episodeSeed);
         std::vector<double> pinkV = generatePinkNoise(n, episodeSeed + 1);
         std::vector<double> pinkW = generatePinkNoise(n, episodeSeed + 2);
+        std::array<std::vector<double>, 3> pinkNoise = {pinkU, pinkV, pinkW};
 
-        //new servo offset per episode
+        //servo offset per episode
         std::uniform_real_distribution<float> distS(0.017f, 0.034f);//misalignment between 1 and 2 deg
         float servosXOffset = distS(gen);
         float servosYOffset = distS(gen);
 
         //*****RESET*****
-
-        //time
+        //time and counting
         numIterations = 0;
         t = 0.0;
         timeSinceLastControl = controlDt;
 
-        //state vars
+        //state arrays
         stateQ = {1.0, 0.0, 0.0, 0.0};
-        stateQTimeDerivative = {0.0, 0.0, 0.0, 0.0};
-        angularVelocity = {0.0, 0.0, 0.0};
+        
         velocity = {0.0, 0.0, 0.0};
         position = {0.0, 0.0, 0.0};
+        
+        angularVelocity = {0.0, 0.0, 0.0};
         psi = {0.0, 0.0};
-
-        //rl
+        
+        //return
         returnT = 0.0; 
 
-        //storage
+        //storage clearing
         rawActions.clear(); 
         reward.clear(); 
         stateVector.clear();
@@ -225,15 +164,15 @@ int main(void){
                 stateVector.push_back(state);
                 
                 //mlp forward pass 
-                mlpControlOut = mlpControl(state, w1, w2, w3, b1, b2, b3);
+                mlpOutputControl = mlpControl(state, w1, w2, w3, b1, b2, b3);
 
-                //distribution parameters
-                float muX = mlpControlOut[0];
-                float sigmaX = std::exp(std::clamp(mlpControlOut[1], -1.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
-                float muY = mlpControlOut[2];
-                float sigmaY = std::exp(std::clamp(mlpControlOut[3], -1.0f, 2.0f));
+                //gaussian distribution parameters
+                float muX = mlpOutputControl[0];
+                float sigmaX = std::exp(std::clamp(mlpOutputControl[1], -1.0f, 2.0f));//ensure that the variance is positive by having network to output log of sigma and thus sigma is exp of that, which will keep it positive
+                float muY = mlpOutputControl[2];
+                float sigmaY = std::exp(std::clamp(mlpOutputControl[3], -1.0f, 2.0f));//also clamping to halt explosions. values were empirically found
 
-                //distribution creation
+                //gaussian distribution creation
                 std::normal_distribution<float> dX{muX, sigmaX};
                 std::normal_distribution<float> dY{muY, sigmaY}; 
                 
@@ -249,95 +188,8 @@ int main(void){
                 rawActions.push_back({rawActionX, rawActionY});
             }
 
-
-            //*****PHYSICS SIMULATION*****
-
-            
-            //*****WIND GEN*****
-            //sampling three independent turbulence streams at time t
-            double u = windVelocity(t, U,   sigmaU,       pinkU);   
-            double v = windVelocity(t, 0.0, 0.8 * sigmaU, pinkV);   
-            double w = windVelocity(t, 0.0, 0.5 * sigmaU, pinkW);  
-
-            //rotate wind frame -> world frame
-            windVelocityWf = {u*ux - v*uy, u*uy + v*ux, w};
-            
-            //velocity of rocket wrt to wind in world frame, then into rocket frame
-            relativeVelocityWf[0] = velocity[0] - windVelocityWf[0];
-            relativeVelocityWf[1] = velocity[1] - windVelocityWf[1];
-            relativeVelocityWf[2] = velocity[2] - windVelocityWf[2];
-            relativeVelocityRf = rotateWfToRf(stateQ, relativeVelocityWf);
-            
-            //magnitude of relative v in RF
-            double relativeVelMag = std::sqrt((relativeVelocityRf[0]*relativeVelocityRf[0]) + (relativeVelocityRf[1]*relativeVelocityRf[1]) + (relativeVelocityRf[2]*relativeVelocityRf[2]));
-            
-            //*****FORCES*****
-            //force due to thrust
-            thrustRf = forceThrustRf(actionX+servosXOffset, actionY+servosYOffset, t);
-            thrustWf = rotateRfToWf(stateQ, thrustRf); 
-
-            //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity
-            aerodynamicForcesRf[0] = -0.5*rho*cNa*aRef*relativeVelocityRf[0]*relativeVelMag;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
-            aerodynamicForcesRf[1] = -0.5*rho*cNa*aRef*relativeVelocityRf[1]*relativeVelMag;
-            aerodynamicForcesRf[2] = -0.5*rho*cD*aRef*(std::abs(relativeVelocityRf[2]))*relativeVelocityRf[2]; 
-            aerodynamicForceswf = rotateRfToWf(stateQ, aerodynamicForcesRf);
-        
-            //sum forces
-            sumOfForcesWf = {thrustWf[0]+aerodynamicForceswf[0], thrustWf[1]+aerodynamicForceswf[1], thrustWf[2]-mass(t)*gravity+aerodynamicForceswf[2]}; 
-            
-
-            //****POSITION AND SUCH*****
-            //compute accleration
-            accleration[0] = (sumOfForcesWf[0] / mass(t));
-            accleration[1] = (sumOfForcesWf[1] / mass(t));
-            accleration[2] = (sumOfForcesWf[2] / mass(t));
-
-            //integrate accleration for velocity
-            velocity[0] += dt*accleration[0];
-            velocity[1] += dt*accleration[1];
-            velocity[2] += dt*accleration[2];
-
-            //integrate velocity for position 
-            position[0] += dt*velocity[0];
-            position[1] += dt*velocity[1];
-            position[2] += dt*velocity[2]; 
-
-
-            //*****TORQUES*****
-            torqueThrust = crossProduct(r, thrustRf);
-            torqueAero = crossProduct(rAero, aerodynamicForcesRf);
-
-
-            //****ROTATION AND SUCH*****
-            //compute angular accleration
-            angularAccleration[0] = ((torqueThrust[0] + torqueAero[0]) / Ixx);
-            angularAccleration[1] = ((torqueThrust[1] + torqueAero[1]) / Iyy);
-
-            //integrate angular accleration for angular velocity 
-            angularVelocity[0] += dt*angularAccleration[0];
-            angularVelocity[1] += dt*angularAccleration[1];
-
-            //convert angular velocity to pure quaternion
-            angularVelocityQ = vectorToPureQuaternion(angularVelocity);
-
-            //compute first derivative of quaternion
-            stateQTimeDerivative = multiplyQP(stateQ, angularVelocityQ);
-            stateQTimeDerivative[0] = stateQTimeDerivative[0]*0.5;
-            stateQTimeDerivative[1] = stateQTimeDerivative[1]*0.5;
-            stateQTimeDerivative[2] = stateQTimeDerivative[2]*0.5;
-            stateQTimeDerivative[3] = stateQTimeDerivative[3]*0.5;
-
-            //integrate time derivative of q to update state quaternion
-            stateQ[0] += dt*stateQTimeDerivative[0];
-            stateQ[1] += dt*stateQTimeDerivative[1];
-            stateQ[2] += dt*stateQTimeDerivative[2];
-            stateQ[3] += dt*stateQTimeDerivative[3];
-
-            //normalize quaterinon 
-            normalizeQuaternion(stateQ);
-
-            //conver to euler angles
-            psi = quaternionToEuler(stateQ); 
+            //******PHYSICS UPDATE******
+            physicsUpdate(dt, t, U, sigmaU, actionX, actionY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
         }
         
         //REINFORCE
@@ -356,20 +208,20 @@ int main(void){
             }
 
 
-            //forward pass
-            mlpOut = mlp(stateVector[i], w1, w2, w3, b1, b2, b3); 
+            //forward pass, get pre-acts and acts, as well as outputs
+            mlpOutputTraining = mlpTrain(stateVector[i], w1, w2, w3, b1, b2, b3); 
             
             //pre-activations and activations, comptued for the new weights from the upated theta
-            std::array<float, 64> y1 = mlpOut.y1;
-            std::array<float, 64> y2 = mlpOut.y2;
-            std::array<float, 4> y3 = mlpOut.y3;
+            std::array<float, 64> y1 = mlpOutputTraining.y1;
+            std::array<float, 64> y2 = mlpOutputTraining.y2;
+            std::array<float, 4> y3 = mlpOutputTraining.y3;
 
-            std::array<float, 64> a1 = mlpOut.a1;
-            std::array<float, 64> a2 = mlpOut.a2;
-            std::array<float, 4> a3 = mlpOut.a3; 
+            std::array<float, 64> a1 = mlpOutputTraining.a1;
+            std::array<float, 64> a2 = mlpOutputTraining.a2;
+            std::array<float, 4> a3 = mlpOutputTraining.a3;//(mu_x, log(sigma_x), mu_y, log(sigma_y))
             
             //sigmas calculated for mkTerms
-            float sigmaX = std::exp(std::clamp(a3[1], -1.0f, 2.0f));
+            float sigmaX = std::exp(std::clamp(a3[1], -1.0f, 2.0f));//same clamping and trick as in physics loop, aka episode generation
             float sigmaY = std::exp(std::clamp(a3[3], -1.0f, 2.0f));
 
             //gradient calculation
@@ -399,12 +251,12 @@ int main(void){
             updateParameters(parameters, w1, b1, w2, b2, w3, b3);
         }
 
-        //for logging purposes
+        //logging
         returnAccumlated += totalReturn;
         accumlatedFlightTime += numIterations*controlDt;
         episodesInWindow ++; 
 
-        //Log to terminal every 1k eps some data 
+        //Log to terminal every 1k eps 
         if((e % 1000 == 0 && e > 0) || e == numEpisodes - 1){
             std::cout << "*************************************************************" << std::endl;
             std::cout << "DATA AFTER " << e << " EPISODES: " << std::endl; 
@@ -419,7 +271,5 @@ int main(void){
 
     //save learned parameters to .bin
     saveParameters(w1, w2, w3, b1, b2, b3);
-    
-    std::cout << w1[1][1] << std::endl;
     return 0;
 }

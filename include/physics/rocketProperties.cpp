@@ -1,5 +1,10 @@
 #include "rocketProperties.h" 
 
+
+double magnitudeThrust(double t){
+    return (-2.32*t+17.76);
+}
+
 std::array<double, 3> forceThrustRf(double gimbalAngleX, double gimbalAngleY, double t){    
     if(t > tBurn){
         std::array<double, 3> forceThrustVectorRf = {0.0, 0.0, 0.0}; 
@@ -12,9 +17,9 @@ std::array<double, 3> forceThrustRf(double gimbalAngleX, double gimbalAngleY, do
     }
 }
 
-double magnitudeThrust(double t){
-    return (-2.32*t+17.76);
-}
+
+
+
 double mass(double t){
     const double massRocketEmpty = 0.95;
     if(t > tBurn) return massRocketEmpty;

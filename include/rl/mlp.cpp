@@ -1,11 +1,12 @@
 #include "mlp.h" 
 
+//*****ACTIVATION FUNCTIONS*****
 float ReLU(float y){
     if(y > 0) return y;
     else return 0.0f;
 }
 
-//*****FUNCTIONS FOR PARAMETERS*****
+//*****PARAMETERS*****
 void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 64>, 4>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, std::array<float, 4>& b3){
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -32,8 +33,7 @@ void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<s
 
 std::array<float, 4740> flattenParameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
     const std::array<std::array<float, 64>, 4>& w3,
-    const std::array<float, 4>& b3)
-{
+    const std::array<float, 4>& b3){
 
     std::array<float, 4740> output;
     int index = 0;
@@ -82,6 +82,7 @@ std::array<float, 4740> flattenParameters(const std::array<std::array<float, 4>,
 
     return output;
 } 
+
 void updateParameters(const std::array<float, 4740>& flattened,
     std::array<std::array<float, 4>, 64>& w1, std::array<float, 64>& b1,
     std::array<std::array<float, 64>, 64>& w2, std::array<float, 64>& b2,
@@ -157,7 +158,8 @@ std::array<float, out> activations(std::array<float, out> y){
     return a;
 }
 
-MLPoutput mlp(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
+//mlp output for training
+MLPoutput mlpTrain(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
     const std::array<float, 64>& b2, const std::array<float, 4>& b3){
 
         std::array<float, 64> y1 = preActivations(w1, b1, s); 
@@ -172,7 +174,7 @@ MLPoutput mlp(const std::array<double, 4>& s, const std::array<std::array<float,
         return {y1, a1, y2, a2, y3, a3};
     }
 
-
+//mlp output for control
 std::array<float, 4> mlpControl(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
     const std::array<float, 64>& b2, const std::array<float, 4>& b3){
 
