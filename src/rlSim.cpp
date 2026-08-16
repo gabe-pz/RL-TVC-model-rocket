@@ -33,6 +33,19 @@ int main(void){
     const double gravity = 9.81;  
     const float rho = 1.187f;
 
+    //random number
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    
+    //*****SERVOS*****
+    
+    //servos offset
+    std::uniform_real_distribution<float> dist(0.017f, 0.034f);//misalignment between 1 and 2 deg
+    float servosXOffset = dist(gen);
+    float servosYOffset = dist(gen);
+
+    //servos slew
+
     //*****WIND SETTINGS*****
     //wind generation constants
     unsigned int seed = 12345;
@@ -180,7 +193,7 @@ int main(void){
                 
                 //*****COMPUTE FORCES*****
                 //force due to thrust
-                thrustRf = forceThrustRf(actionX, actionY, t);
+                thrustRf = forceThrustRf(actionX+servosXOffset, actionY+servosYOffset, t);
                 thrustWf = rotateRfToWf(stateQ, thrustRf); 
 
                 //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity

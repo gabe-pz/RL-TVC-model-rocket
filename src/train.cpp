@@ -39,11 +39,14 @@ int main(void){
     const float rho = 1.187f;
     double t = 0.0;
 
-    //servos offsets 
+    //random number
     std::random_device rd;
     std::mt19937 gen(rd());
-       
+    
+    //*****SERVOS*****
 
+    //servos slew
+    
     //*****WIND SETTINGS*****
     //wind generation constants
     double U         = 5.0;  //average wind velocity
@@ -135,15 +138,15 @@ int main(void){
     double totalReturn = 0.0;
 
     //episodes and counters
-    int numEpisodes = 25000;
+    int numEpisodes = 50000;
     int numIterations = 0; 
     int episodesInWindow = 0;
     
     //hyperparameters
     float alpha = 0.0001f;//step size
-    float gamma = 0.82f;//discount factor 
-    float a = 125.0f;//exp constant
-    // float b = 1.0f;//angular v penalize factor
+    float gamma = 0.925f;//discount factor 
+    float a = 150.0f;//exp constant
+    float b = 5.0f;//angular v penalize factor
 
     for(int e = 0; e < numEpisodes; e++){      
         //*****ENV*****
@@ -155,6 +158,10 @@ int main(void){
         std::vector<double> pinkV = generatePinkNoise(n, episodeSeed + 1);
         std::vector<double> pinkW = generatePinkNoise(n, episodeSeed + 2);
 
+        //new servo offset per episode
+        std::uniform_real_distribution<float> dist(0.017f, 0.034f);//misalignment between 1 and 2 deg
+        float servosXOffset = dist(gen);
+        float servosYOffset = dist(gen);
 
         //*****RESET*****
 
@@ -201,7 +208,7 @@ int main(void){
                     }
                 
                     //reward update
-                    double rewardT = std::exp(-a*(psi[0]*psi[0]+psi[1]*psi[1]));
+                    double rewardT = std::exp(-a*(psi[0]*psi[0]+psi[1]*psi[1])) - b*(angularVelocity[0]*angularVelocity[0]+angularVelocity[1]*angularVelocity[1]);
                     reward.push_back(rewardT);       
                 }
 
@@ -261,7 +268,7 @@ int main(void){
             
             //*****FORCES*****
             //force due to thrust
-            thrustRf = forceThrustRf(actionX, actionY, t);
+            thrustRf = forceThrustRf(actionX+servosXOffset, actionY+servosYOffset, t);
             thrustWf = rotateRfToWf(stateQ, thrustRf); 
 
             //aero forces. Note for normal force throw the negative on there to account for the fact want to use the free-stream velocity
