@@ -78,7 +78,7 @@ e^{-a(\psi^2+\phi^2)} - b(\dot{\psi}^2+\dot{\phi}^2) & ,\text{otherwise}
 \end{cases}
 $$
 
-Where ${a}$, ${b}$, and ${c}, are hyperparameters, and if agent gets reward of ${c}$ the episode is terminated.
+Where ${a}$, ${b}$, and ${c}$, are hyperparameters, and if agent gets reward of ${c}$ the episode is terminated.
 
   
 
@@ -150,7 +150,7 @@ float alpha = 0.0001f;//step size
 float gamma = 0.925f;//discount factor 
 float a = 150.0f;//exp constant
 float b = 5.0f;//angular v penalize factor
-float maxStep = 0.005;//max gradient term can be
+float maxStep = 1.0;//max gradient term can be
 ```
 
 These are still being tuned to achieve better flights, but for now as is they were able to achieve the success criterion 
