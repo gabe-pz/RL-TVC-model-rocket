@@ -72,13 +72,9 @@ The reward model in RL is something very important, since this signal is that es
 
 $$
 r_t(\psi, \phi) =
-
 \begin{cases}
-
 -c & , |\psi| > 0.34  \lor |\phi| > 0.34 \\
-
 e^{-a(\psi^2+\phi^2)} - b(\psi^2+\phi^2) & ,\text{otherwise}
-
 \end{cases}
 $$
 
@@ -126,3 +122,17 @@ After training then want to select the action with the highest probability each 
 
 
 ## The Network
+As stated before the neural network architecture I used was a feed-forward multilayer perceptron (MLP). It took the state vector ${\vec s}$ and outputted parameters for each independent policy, ${\pi_x}$ and ${\pi_y}$, as such,
+$$
+{\vec\kappa = f[\vec s, \vec\theta]=(\mu_x, \log(\sigma_x), \mu_y, \log(\sigma_y)})^T
+$$
+The MLP I used consists of 2 hidden layers, each with 64 hidden units. 
+
+The activation function I used was the rectified linear unit, or ReLU for short. I only applied it to the 2 hidden layers and not the output layer because ReLU is defined as
+$$
+{\text{ReLU}(z) =\begin{cases}
+0 & ,z <0 \\
+z & , z\geq 0
+\end{cases} }
+$$
+meaning its range is ${(0,+\infty)}$. But for the Gaussian, ${\mu}$ is defined on ${(-\infty, \infty)}$, so in the laziest way to account for that, I simply removed the activation on the output layer and kept it linear.
