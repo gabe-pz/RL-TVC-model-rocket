@@ -48,11 +48,6 @@ int main(void){
     //servos slew
     
     //*****WIND SETTINGS*****
-    //wind generation constants
-    double U         = 5.0;  //average wind velocity
-    double intensity = 0.20; //turbulence intensity 
-    double sigmaU    = intensity * U;
-    
 
     //mean-wind heading in world frame
     double theta = 0.0;
@@ -138,18 +133,28 @@ int main(void){
     double totalReturn = 0.0;
 
     //episodes and counters
-    int numEpisodes = 50000;
+    int numEpisodes = 25000;
     int numIterations = 0; 
     int episodesInWindow = 0;
     
     //hyperparameters
-    float alpha = 0.0001f;//step size
-    float gamma = 0.925f;//discount factor 
-    float a = 150.0f;//exp constant
-    float b = 5.0f;//angular v penalize factor
+    float alpha = 0.00005f;//step size
+    float gamma = 0.9f;//discount factor 
+    float a = 175.0f;//exp constant
+    float b = 5.5f;//angular v penalize factor
+    int c = -10;//termination reward
 
     for(int e = 0; e < numEpisodes; e++){      
-        //*****ENV*****
+        //******NEW WIND*****
+
+        //new wind generation constants per episode
+        std::uniform_real_distribution<double> distU(2.0, 10.0); //random average wind speed
+        double U = distU(gen);
+
+        std::uniform_real_distribution<double> distIntensity(0.10, 0.20); //random turb intensity
+        double intensity = distIntensity(gen); 
+        
+        double sigmaU = intensity * U;
 
         //new random wind per episode
         unsigned int episodeSeed = rd();
@@ -159,9 +164,9 @@ int main(void){
         std::vector<double> pinkW = generatePinkNoise(n, episodeSeed + 2);
 
         //new servo offset per episode
-        std::uniform_real_distribution<float> dist(0.017f, 0.034f);//misalignment between 1 and 2 deg
-        float servosXOffset = dist(gen);
-        float servosYOffset = dist(gen);
+        std::uniform_real_distribution<float> distS(0.017f, 0.034f);//misalignment between 1 and 2 deg
+        float servosXOffset = distS(gen);
+        float servosYOffset = distS(gen);
 
         //*****RESET*****
 
@@ -203,7 +208,7 @@ int main(void){
                     if(std::abs(psi[0]) > 0.34 || std::abs(psi[1]) > 0.34){
                         
                         //negative reward for termination
-                        reward.push_back(-10.0);       
+                        reward.push_back(c);       
                         break;
                     }
                 

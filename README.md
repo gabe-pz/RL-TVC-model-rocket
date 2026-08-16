@@ -146,11 +146,12 @@ All that was used to train the network was vanilla stochastic gradient ascent wi
 given here
 
 ```cpp
-float alpha = 0.0001f;//step size
-float gamma = 0.925f;//discount factor 
-float a = 150.0f;//exp constant
-float b = 5.0f;//angular v penalize factor
-float maxStep = 1.0;//max gradient term can be
+//hyperparameters
+float alpha = 0.00005f;//step size
+float gamma = 0.9f;//discount factor 
+float a = 175.0f;//exp constant
+float b = 5.5f;//angular v penalize factor
+int c = -10.0f;//termination reward
 ```
 
 These are still being tuned to achieve better flights, but for now as is they were able to achieve the success criterion 
@@ -170,4 +171,4 @@ The results of the flight after 25,000 episodes of training and a burn time of $
 ## Disclaimer
 I am by no means a programmer, I study physics at univeristy and read machine learning text in my spare time. I simply implement the ideas I find cool when I have time to.
 
-I am aware this project is highly unoptimized, a bit redundant, and lacks readable. And I would appericate any tips or tricks programers have. Though I still do plan to try and fix these issues on my own as I learn more about programming, since I started to study that in my spare time as well. 
+I am aware this project is highly unoptimized, a bit redundant, and lacks readable, thus I would appericate any tips or tricks programers have. Though, I still do plan to try and fix these issues on my own as I learn more about programming, since I started to study that in my spare time as well. 
