@@ -152,8 +152,10 @@ int c = -10;//termination reward
 
 float maxStep = 1.0;//max step for grad clipping
 ```
+A plot of episodes vs average return, logged every 1k episodes, is given below, 
 
-Note: These are still being tuned to achieve better flight, so might change in repo later on
+![enter image description here](https://cdn.phototourl.com/free/2026-08-17-b803d83b-2242-4c7c-bd28-d7187ddd827b.png)
+
 
 ## Results
 The results of the flight after 50,000 episodes of training and a burn time of ${t=3.45s}$ are given below in the plots showing successfully achievement of the criterion,

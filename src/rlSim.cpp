@@ -3,7 +3,7 @@
 #include <array>
 #include <fstream>
 
-#include "../include/physics/physicsLoop.h"
+#include "../include/physics/rocketPhysics.h"
 #include "../include/control/rlControl.h"
 #include "../include/io/log.h"
 #include "../include/io/saveAndLoad.h"
@@ -113,7 +113,7 @@ int main(void){
                 }
                 
                 //******PHYSICS UPDATE******
-                physicsUpdate(dt, t, U, sigmaU, actionX, actionY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
+                stateUpdate(dt, t, U, sigmaU, actionX, actionY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
                                 
                 //*****LANDING CHECK*****
                 if(position[2] < 0 && t > 0.5){

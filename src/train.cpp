@@ -8,8 +8,11 @@
 #include "../include/rl/mlp.h"
 #include "../include/rl/gradient.h"
 #include "../include/rl/REINFORCE.h"
+
 #include "../include/io/saveAndLoad.h"
-#include "../include/physics/physicsLoop.h"
+#include "../include/io/log.h"
+
+#include "../include/physics/rocketPhysics.h"
 
 int main(void){
     //*****RANDOM NUM GEN*****
@@ -65,17 +68,19 @@ int main(void){
     std::vector<double> reward;
     double returnT = 0.0; 
 
-    //logging vars
+    //logging
     double returnAccumlated = 0.0;
     double accumlatedFlightTime = 0.0;
     double totalReturn = 0.0;
+    
+    initCSV("logging/averageReturnE1000.csv", 2);
 
     //episodes and counters
     int numEpisodes = 50000;
     int numIterations = 0; 
     int episodesInWindow = 0;
     
-    //hyperparameters
+    //*****HYPERPARAMETERS*****
     float alpha = 0.00005f;//step size
     float gamma = 0.8f;//discount factor 
     float a = 175.0f;//exp constant
@@ -192,7 +197,7 @@ int main(void){
             }
 
             //******PHYSICS UPDATE******
-            physicsUpdate(dt, t, U, sigmaU, actionX, actionY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
+            stateUpdate(dt, t, U, sigmaU, actionX, actionY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
         }
         
         //REINFORCE
@@ -204,10 +209,7 @@ int main(void){
                 returnT += std::pow(gamma, k-i) * reward[k];
                 
                 //log total return from start of ep, for current ep
-                if(i == 0 && k == (int)reward.size()-1){
-                    totalReturn = returnT;
-                }
-
+                if(i == 0 && k == (int)reward.size()-1) totalReturn = returnT;
             }
 
 
@@ -224,7 +226,7 @@ int main(void){
             std::array<float, 4> a3 = mlpOutputTraining.a3;//(mu_x, log(sigma_x), mu_y, log(sigma_y))^T
             
             //sigmas calculated for mkTerms
-            float sigmaX = std::exp(std::clamp(a3[1], lowerBoundExp, upperBoundExp));//same clamping and trick as in physics loop, aka episode generation
+            float sigmaX = std::exp(std::clamp(a3[1], lowerBoundExp, upperBoundExp));//same clamping and trick as in physics loop
             float sigmaY = std::exp(std::clamp(a3[3], lowerBoundExp, upperBoundExp));
 
             //gradient calculation
@@ -239,21 +241,13 @@ int main(void){
             std::array<std::array<float, 4>, 2> gB3 = gradientLogPoliciesB3(y3, mk);
 
             //construct the gradient
-            std::array<std::array<float, 4740>, 2> constructGrads = constructGradients(gW1, gB1, gW2, gB2, gW3, gB3);
-            std::array<float, 4740> gradX = constructGrads[0];
-            std::array<float, 4740> gradY = constructGrads[1];
+            std::array<std::array<float, 4740>, 2> constructGrads = constructGradients(gW1, gB1, gW2, gB2, gW3, gB3);// {gradX, gradY}
             
             //calculate the gradient term in REINFORCE
-            std::array<float, 4740> gradTerm = gradientTerm(gradX, gradY, alpha, returnT);
-            
-            //flatten weights and biases into single vector, theta
-            std::array<float, 4740> parameters = flattenParameters(w1, b1, w2, b2, w3, b3);
-            
-            //apply the reinforce update
-            REINFORCEupdate(parameters, gradTerm);
-            
-            //update each weight and bias with the reinforce update
-            updateParameters(parameters, w1, b1, w2, b2, w3, b3);
+            std::array<float, 4740> gradientTerm = gradientTermREINFORCE(constructGrads[0], constructGrads[1], alpha, returnT);
+
+            //apply update to parameters
+            REINFORCEupdate(w1, b1, w2, b2, w3, b3, gradientTerm);
         }
 
         //logging
@@ -263,10 +257,14 @@ int main(void){
 
         //Log to terminal every 1k eps 
         if((e % 1000 == 0 && e > 0) || e == numEpisodes - 1){
+            double averageReturn = returnAccumlated / episodesInWindow*1.0;
             std::cout << "*************************************************************" << std::endl;
             std::cout << "DATA AFTER " << e << " EPISODES: " << std::endl; 
-            std::cout << "AVERAGE RETURN = " << (returnAccumlated / episodesInWindow) << std::endl;
+            std::cout << "AVERAGE RETURN = " << averageReturn << std::endl;
             std::cout << "AVERAGE FLIGHT TIME = " << (accumlatedFlightTime / episodesInWindow) << "s" << std::endl;
+
+
+            logToCSV(e, averageReturn, "logging/averageReturnE1000.csv"); 
 
             returnAccumlated = 0.0;
             accumlatedFlightTime = 0.0;

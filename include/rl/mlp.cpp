@@ -7,7 +7,9 @@ float ReLU(float y){
 }
 
 //*****PARAMETERS*****
-void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 64>, 4>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, std::array<float, 4>& b3){
+void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<std::array<float, 64>, 64>& w2, std::array<std::array<float, 64>, 4>& w3, std::array<float, 64>& b1, std::array<float, 64>& b2, 
+    std::array<float, 4>& b3){
+    
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-0.1f, 0.1f);
@@ -29,102 +31,6 @@ void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<s
     b1.fill(0.0f);
     b2.fill(0.0f);
     b3 = {0.0f, -2.0f, 0.0f, -2.0f};
-}
-
-std::array<float, 4740> flattenParameters(const std::array<std::array<float, 4>, 64>& w1, const std::array<float, 64>& b1, const std::array<std::array<float, 64>, 64>& w2, const std::array<float, 64>& b2,
-    const std::array<std::array<float, 64>, 4>& w3,
-    const std::array<float, 4>& b3){
-
-    std::array<float, 4740> output;
-    int index = 0;
-
-    //w1
-    for(int i = 0; i < 64; i++){
-        for(int j = 0; j < 4; j++){
-            output[index] = w1[i][j];
-            index++;
-        }
-    }
-
-    //b1
-    for(int i = 0; i < 64; i++){
-        output[index] = b1[i];
-        index++;
-    }
-
-    //w2
-    for(int i = 0; i < 64; i++){
-        for(int j = 0; j < 64; j++){
-            output[index] = w2[i][j];
-            index++;
-        }
-    }
-
-    //b2
-    for(int i = 0; i < 64; i++){
-        output[index] = b2[i];
-        index++;
-    }
-
-    //w3
-    for(int i = 0; i < 4; i++){
-        for(int j = 0; j < 64; j++){
-            output[index] = w3[i][j];
-            index++;
-        }
-    }
-
-    //b3
-    for(int i = 0; i < 4; i++){
-        output[index] = b3[i];
-        index++;
-    }
-
-    return output;
-} 
-
-void updateParameters(const std::array<float, 4740>& flattened,
-    std::array<std::array<float, 4>, 64>& w1, std::array<float, 64>& b1,
-    std::array<std::array<float, 64>, 64>& w2, std::array<float, 64>& b2,
-    std::array<std::array<float, 64>, 4>& w3, std::array<float, 4>& b3){
-
-        int index = 0;
-        //w1
-        for(int i = 0; i < 64; i++){
-            for(int j = 0; j < 4; j++){
-                w1[i][j] = flattened[index];
-                index++;
-            }
-        }
-        //b1
-        for(int i = 0; i < 64; i++){
-            b1[i] = flattened[index];
-            index++;
-        }
-        //w2
-        for(int i = 0; i < 64; i++){
-            for(int j = 0; j < 64; j++){
-                w2[i][j] = flattened[index];
-                index++;
-            }
-        }
-        //b2
-        for(int i = 0; i < 64; i++){
-            b2[i] = flattened[index];
-            index++;
-        }
-        //w3
-        for(int i = 0; i < 4; i++){
-            for(int j = 0; j < 64; j++){
-                w3[i][j] = flattened[index];
-                index++;
-            }
-        }
-        //b3
-        for(int i = 0; i < 4; i++){
-            b3[i] = flattened[index];
-            index++;
-        }
 }
 
 //*****Pre-activations and activations*****
@@ -158,7 +64,7 @@ std::array<float, out> activations(std::array<float, out> y){
     return a;
 }
 
-//mlp output for training
+//*****MLP*****
 MLPoutput mlpTrain(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
     const std::array<float, 64>& b2, const std::array<float, 4>& b3){
 
@@ -174,7 +80,6 @@ MLPoutput mlpTrain(const std::array<double, 4>& s, const std::array<std::array<f
         return {y1, a1, y2, a2, y3, a3};
     }
 
-//mlp output for control
 std::array<float, 4> mlpControl(const std::array<double, 4>& s, const std::array<std::array<float, 4>, 64>& w1, const std::array<std::array<float, 64>, 64>& w2, const std::array<std::array<float, 64>, 4>& w3, const std::array<float, 64>& b1, 
     const std::array<float, 64>& b2, const std::array<float, 4>& b3){
 

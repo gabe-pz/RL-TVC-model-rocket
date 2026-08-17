@@ -5,7 +5,7 @@ CXX = g++
 #Build & run rlSim
 sim:
 	mkdir -p bin
-	$(CXX) -Wall -g -Iinclude src/rlSim.cpp $(shell find include -name '*.cpp') -o bin/rlSim -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+	$(CXX) -Wall -g -I include src/rlSim.cpp $(shell find include -name '*.cpp') -o bin/rlSim -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 	./bin/rlSim
 
 #Build & run train
