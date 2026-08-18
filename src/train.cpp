@@ -73,7 +73,7 @@ int main(void){
     double accumlatedFlightTime = 0.0;
     double totalReturn = 0.0;
     
-    initCSV("logging/averageReturnE1000.csv", 2);
+    initCSV("logging/averageReturnE-1000.csv", 2);
 
     //episodes and counters
     int numEpisodes = 50000;
@@ -264,7 +264,7 @@ int main(void){
             std::cout << "AVERAGE FLIGHT TIME = " << (accumlatedFlightTime / episodesInWindow) << "s" << std::endl;
 
 
-            logToCSV(e, averageReturn, "logging/averageReturnE1000.csv"); 
+            logToCSV(e, averageReturn, "logging/averageReturnE-1000.csv"); 
 
             returnAccumlated = 0.0;
             accumlatedFlightTime = 0.0;

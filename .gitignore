@@ -1,8 +1,7 @@
 bin/
 weights.bin
 
-logging/dataRotX.csv
-logging/dataRotY.csv
+logging/*.csv
 
 .DS_Store
 *.o

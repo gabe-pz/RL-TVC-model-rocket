@@ -27,7 +27,7 @@ def display_scatter_plot_rot(y_axis: str) -> None:
 def display_scatter_plot_return() -> None:
     
 
-    df = pd.read_csv("logging/averageReturnE1000.csv") 
+    df = pd.read_csv("logging/averageReturnE-1000.csv") 
 
     #Create an interactive scatter plot
     fig = px.scatter(df, x="episodes", y="averageReturn", title=f"Training Data: episodes(x10^3) vs averageReturn")
