@@ -201,13 +201,15 @@ int main(void){
                 actionX = 0.087*std::tanh(rawActionX);
                 actionY = 0.087*std::tanh(rawActionY);
 
-                slewServo(currentServoX, actionX, dt);//keep movements of servos within physical limits
-                slewServo(currentServoY, actionY, dt);
-
                 //log raw actions sampled from distribution
                 rawActions.push_back({rawActionX, rawActionY});
             }
 
+
+            //*****SERVO SLEW******
+            slewServo(currentServoX, actionX, dt);//keep movements of servos within physical limits
+            slewServo(currentServoY, actionY, dt);
+            
             //******PHYSICS UPDATE******
             stateUpdate(dt, t, U, sigmaU, currentServoX, currentServoY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
         }

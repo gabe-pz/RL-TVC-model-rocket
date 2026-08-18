@@ -75,15 +75,14 @@ int main(void){
     float servosXOffset = dist(gen);
     float servosYOffset = dist(gen);
 
-    //*****CONTROL*****
-    
-    //actions
-    float actionX = 0.0f;
-    float actionY = 0.0f;
-
     //servos
     float currentServoX = 0.0f;
     float currentServoY = 0.0f;
+
+    //*****CONTROL*****
+    //actions
+    float actionX = 0.0f;
+    float actionY = 0.0f;
 
     //speed to run control at
     const double controlDt = 0.05; 
@@ -119,10 +118,12 @@ int main(void){
 
                     actionX = 0.087*std::tanh(rawActionX);
                     actionY  = 0.087*std::tanh(rawActionY);
-                    
-                    slewServo(currentServoX, actionX, dt);
-                    slewServo(currentServoY, actionY, dt);
+
                 }
+
+                //*****SERVO SLEW******
+                slewServo(currentServoX, actionX, dt);//keep movements of servos within physical limits
+                slewServo(currentServoY, actionY, dt);
                 
                 //******PHYSICS UPDATE******
                 stateUpdate(dt, t, U, sigmaU, currentServoX, currentServoY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
