@@ -4,9 +4,13 @@
 #include <fstream>
 
 #include "../include/physics/rocketPhysics.h"
+
 #include "../include/control/rlControl.h"
+#include "../include/control/servos.h"
+
 #include "../include/io/log.h"
 #include "../include/io/saveAndLoad.h"
+
 #include "../include/graphics/raylibFunction.h"
 
 int main(void){     
@@ -72,9 +76,14 @@ int main(void){
     float servosYOffset = dist(gen);
 
     //*****CONTROL*****
-
+    
+    //actions
     float actionX = 0.0f;
     float actionY = 0.0f;
+
+    //servos
+    float currentServoX = 0.0f;
+    float currentServoY = 0.0f;
 
     //speed to run control at
     const double controlDt = 0.05; 
@@ -99,6 +108,8 @@ int main(void){
 
                 //******CONTROL*****
                 if(timeSinceLastControl >= controlDt){
+                    timeSinceLastControl = 0.0;
+                    
                     std::array<double, 4> stateVector = {psi[0], psi[1], angularVelocity[0], angularVelocity[1]};
 
                     std::array<float, 2> policyOutputs = policy(stateVector, w1, w2, w3, b1, b2, b3);
@@ -108,12 +119,13 @@ int main(void){
 
                     actionX = 0.087*std::tanh(rawActionX);
                     actionY  = 0.087*std::tanh(rawActionY);
-
-                    timeSinceLastControl = 0.0;
+                    
+                    slewServo(currentServoX, actionX, dt);
+                    slewServo(currentServoY, actionY, dt);
                 }
                 
                 //******PHYSICS UPDATE******
-                stateUpdate(dt, t, U, sigmaU, actionX, actionY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
+                stateUpdate(dt, t, U, sigmaU, currentServoX, currentServoY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
                                 
                 //*****LANDING CHECK*****
                 if(position[2] < 0 && t > 0.5){

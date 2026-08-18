@@ -13,6 +13,7 @@
 #include "../include/io/log.h"
 
 #include "../include/physics/rocketPhysics.h"
+#include "../include/control/servos.h"
 
 int main(void){
     //*****RANDOM NUM GEN*****
@@ -60,6 +61,10 @@ int main(void){
     float actionX = 0.0f;
     float actionY = 0.0f;
     
+    //servos
+    float currentServoX;
+    float currentServoY;
+
     //control 
     double controlDt = 0.05;
     double timeSinceLastControl = controlDt;
@@ -82,9 +87,9 @@ int main(void){
     
     //*****HYPERPARAMETERS*****
     float alpha = 0.00005f;//step size
-    float gamma = 0.8f;//discount factor 
-    float a = 175.0f;//exp constant
-    float b = 5.5f;//angular v penalize factor
+    float gamma = 0.85f;//discount factor 
+    float a = 190.0f;//exp constant
+    float b = 7.0f;//angular v penalize factor
     float lowerBoundExp = -1.0f;//the lower bound for clamp of exponential for computing sigma 
     float upperBoundExp = 2.0f;//the upper bound  for clamp of exponential for computing sigma 
     int c = -10;//termination reward
@@ -120,6 +125,10 @@ int main(void){
         numIterations = 0;
         t = 0.0;
         timeSinceLastControl = controlDt;
+
+        //servos
+        currentServoX = 0.0;
+        currentServoY = 0.0;
 
         //state arrays
         stateQ = {1.0, 0.0, 0.0, 0.0};
@@ -192,12 +201,15 @@ int main(void){
                 actionX = 0.087*std::tanh(rawActionX);
                 actionY = 0.087*std::tanh(rawActionY);
 
+                slewServo(currentServoX, actionX, dt);//keep movements of servos within physical limits
+                slewServo(currentServoY, actionY, dt);
+
                 //log raw actions sampled from distribution
                 rawActions.push_back({rawActionX, rawActionY});
             }
 
             //******PHYSICS UPDATE******
-            stateUpdate(dt, t, U, sigmaU, actionX, actionY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
+            stateUpdate(dt, t, U, sigmaU, currentServoX, currentServoY, servosXOffset, servosYOffset, pinkNoise, position, velocity, stateQ, angularVelocity, psi);
         }
         
         //REINFORCE

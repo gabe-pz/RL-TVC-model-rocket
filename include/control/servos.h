@@ -5,4 +5,4 @@
 #include "../math/rocketMath.h"
 
 
-void slewServo(double& currentServoAngle, double desiredAngle, double maxRate, double dt);
+void slewServo(float& currentServoAngle, float desiredAngle, const double dt);
