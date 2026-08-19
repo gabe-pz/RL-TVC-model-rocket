@@ -30,14 +30,10 @@ $$
 {+\hat z = \hat x \times  \hat y}
 $$
 
-  
 
-The simulator is built around a ~1kg model rocket flying a Estes F-15-0 motor.
+The simulator was built around a model rocket with a mass of about 1kg and flying an Estes F-15-0 motor. Thus the aerodynamics are modeled for rockets flying well under supersonic speeds.
 
-  
-
-This is an episodic task, where each powered flight is an episode.
-
+Also this is an episodic task, where each powered flight is a single episode. 
   
 
 #### State Space
