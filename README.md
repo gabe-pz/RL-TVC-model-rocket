@@ -32,7 +32,7 @@ $$
 
   
 
-The simulator is quite "bare bones" due to the fact this was really meant to test policy gradient methods and not for flying actual rockets and the simulator was built around a ~1kg model rocket flying a Estes F-15-0 motor.
+The simulator is built around a ~1kg model rocket flying a Estes F-15-0 motor.
 
   
 
