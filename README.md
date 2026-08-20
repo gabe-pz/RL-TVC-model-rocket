@@ -11,7 +11,7 @@ The **goal** of this project was to use policy gradient methods with deep neural
 In general a model rocket is said to be stable if the center of pressure(which is the point where all the aerodynamics forces seem to concentrate) is behind the center of gravity, since the torques generated from the forces at the CP would restore the model rockets orientation, allowing it fly stable. This can be seen using the right hand rule and using some imagination of scenarios.
 
 
-Due to some aerodynamics, model rockets with **fins** typically get the CP behind the CG. But if you have a model rocket with no fins then typically the CP wont be behind the CG, and thus you want have that aerodynamic restoring force and the model rocket won't fly stable.
+Due to some aerodynamics, model rockets with **fins** typically get the CP behind the CG. But if you have a model rocket with no fins then typically the CP wont be behind the CG, and thus you wont have that aerodynamic restoring force and the model rocket won't fly stable.
 
   
 The model rocket I am building will not have any fins, so I must rely upon some other method for keeping the rocket stable in flight. The method I will use is Thrust Vector Control(TVC), which like the name implies, it controls the thrust vector. The way this is done is by mounting the motor to a gimbal, so that the thrust vector can be moved around to desired angles to keep the model rocket stable.
