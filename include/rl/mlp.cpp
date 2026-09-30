@@ -30,7 +30,7 @@ void initWeightsAndBiases(std::array<std::array<float, 4>, 64>& w1, std::array<s
     //init biases 
     b1.fill(0.0f);
     b2.fill(0.0f);
-    b3 = {0.0f, -2.0f, 0.0f, -2.0f};
+    b3 = {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 //*****Pre-activations and activations*****

@@ -32,9 +32,7 @@ int main(void){
     double sigmaU = intensity * U;
     
     //wind turbulence buffers
-    std::vector<double> pinkU = generatePinkNoise(n, seed);
-    std::vector<double> pinkV = generatePinkNoise(n, seed + 1);
-    std::vector<double> pinkW = generatePinkNoise(n, seed + 2);
+    std::vector<double> pinkU = generatePinkNoise(n, seed); std::vector<double> pinkV = generatePinkNoise(n, seed + 1); std::vector<double> pinkW = generatePinkNoise(n, seed + 2);
     std::array<std::vector<double>, 3> pinkNoise = {pinkU, pinkV, pinkW};
 
     //*****LOGGING*****
